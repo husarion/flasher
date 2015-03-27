@@ -53,7 +53,7 @@
                                    (XCP_MASTER_TX_MAX_DATA+1) : (XCP_MASTER_RX_MAX_DATA+1))
 
 /** \brief The smallest time in millisecond that the UART is configured for. */
-#define UART_RX_TIMEOUT_MIN_MS   (5)
+#define UART_RX_TIMEOUT_MIN_MS   (100)
 
 
 /****************************************************************************************
