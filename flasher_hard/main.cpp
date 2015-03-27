@@ -162,12 +162,14 @@ int run(uint32_t addr)
 
 int main(int argc, char** argv)
 {
+	int speed = 460800;
+
 	static struct option long_options[] =
 	{
 		{ "test",  no_argument,       &doTest,  1 },
 		{ "flash", no_argument,       &doFlash, 1 },
 		
-		{ "speed",         required_argument, 0, 's' },
+		{ "speed", required_argument, 0, 's' },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -176,7 +178,7 @@ int main(int argc, char** argv)
 	{
 		int option_index = 0;
 		char *p;
-		int c = getopt_long(argc, argv, "tefs:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "tfs:", long_options, &option_index);
 		if (c == -1)
 			break;
 			
@@ -187,6 +189,11 @@ int main(int argc, char** argv)
 			break;
 		case 'f':
 			doFlash = 1;
+			break;
+		case 's':
+			speed = atoi(optarg);
+			if (speed == 0)
+				speed = 460800;
 			break;
 		}
 	}
@@ -227,7 +234,7 @@ int main(int argc, char** argv)
 		if (handle)
 			uart_close(handle);
 		printf("opening device...\n");
-		handle = uart_open(460800);
+		handle = uart_open(speed);
 		if (!handle)
 		{
 			perror("unable to open device");

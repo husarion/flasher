@@ -1,13 +1,3 @@
 flasher
 main.bin
-CMakeFiles
-CMakeCache.txt
-cmake_install.cmake
-/Makefile
-*.out
-*.o
-*.bin
-*.elf
-*.map
 flasher_hard
-/bin

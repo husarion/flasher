@@ -3,14 +3,10 @@ get_filename_component(CURRENT_DIR ${CMAKE_CURRENT_LIST_FILE} PATH) # for cmake 
 
 project(flasher_hard C CXX ASM)
 
-set(debug_flags "-DHFRAMEWORK_COMPILE -DSYSTEM_DEBUG -DUSB_DEBUG -DUSB_ADK_DEBUG -DUSB_CORE_DEBUG")
-
-set(common_flags "")
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 if(WIN32)
-	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/windows")
+	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/windows/")
 	set(lib_flags "-L  ${CMAKE_SOURCE_DIR}/port/windows/")
 endif()
 
