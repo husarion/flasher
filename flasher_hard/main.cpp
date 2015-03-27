@@ -258,6 +258,7 @@ int main(int argc, char** argv)
 					if (res == 0)
 					{
 						printf("Programming done\n");
+						break;
 					}
 				}
 			}
