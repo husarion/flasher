@@ -1,7 +1,6 @@
 #include "uart.h"
 
 #include <stdio.h>
-#include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -21,7 +20,7 @@ void setPin(ftdi_context* ftdi, int pin, int value)
 	ftdi_set_bitmode(ftdi, vals, BITMODE_CBUS);
 }
 
-SerialHandle uart_open(const char* path, int speed)
+SerialHandle uart_open(int speed)
 {
 	ftdi_context *ftdi = ftdi_new();
 	int ret;
@@ -46,7 +45,6 @@ SerialHandle uart_open(const char* path, int speed)
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
-	speed = 460800;
 	ftdi_set_baudrate(ftdi, speed);
 	
 	return ftdi;

@@ -25,7 +25,6 @@ struct stm32_dev_info_t
 	uint32_t flashStart, flashEnd;
 	uint32_t optStart, optEnd;
 	int sectors;
-	void (*update)(stm32_dev_t* dev);
 };
 
 extern stm32_dev_info_t devices[];

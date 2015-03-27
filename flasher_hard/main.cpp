@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include <termios.h>
 #include <unistd.h>
 #include <getopt.h>
 
@@ -26,12 +25,6 @@ stm32_dev_t dev;
 int doTest = 0;
 int doErase = 0;
 int doFlash = 0;
-int noRun = 0;
-
-const char* devicePath = "/dev/ttyUSB0";
-int speed = B115200;
-
-vector<int> excludedPages;
 
 uint32_t getTicks()
 {
@@ -233,8 +226,8 @@ int main(int argc, char** argv)
 	{
 		if (handle)
 			uart_close(handle);
-		printf("opening device %s...\n", devicePath);
-		handle = uart_open(devicePath, speed);
+		printf("opening device...\n");
+		handle = uart_open(460800);
 		if (!handle)
 		{
 			perror("unable to open device");
@@ -257,16 +250,7 @@ int main(int argc, char** argv)
 					res = programm();
 					if (res == 0)
 					{
-						if (!noRun)
-						{
-							res = run(0x08000000);
-							if (res == 0)
-								break;
-						}
-						else
-						{
-							break;
-						}
+						printf("Programming done\n");
 					}
 				}
 			}
