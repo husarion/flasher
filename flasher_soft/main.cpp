@@ -279,7 +279,7 @@ static sb_uint8 ParseCommandLine(int argc, const char *argv[])
 	sb_uint8 srecordfound = SB_FALSE;
 	
 	/* make sure the right amount of arguments are given */
-	if (argc != 4)
+	if (argc != 3)
 	{
 		return SB_FALSE;
 	}
@@ -296,13 +296,7 @@ static sb_uint8 ParseCommandLine(int argc, const char *argv[])
 			strcpy(serialDeviceName, &argv[paramIdx][2]);
 			paramDfound = SB_TRUE;
 		}
-		/* is this the device name? */
-		else if ((argv[paramIdx][0] == '-') && (argv[paramIdx][1] == 'b') && (paramBfound == SB_FALSE))
-		{
-			/* extract the baudrate and set flag that this parameter was found */
-			sscanf(&argv[paramIdx][2], "%u", &serialBaudrate);
-			paramBfound = SB_TRUE;
-		}
+
 		/* still here so it must be the filename */
 		else if (srecordfound == SB_FALSE)
 		{
@@ -313,7 +307,7 @@ static sb_uint8 ParseCommandLine(int argc, const char *argv[])
 	}
 	
 	/* verify if all parameters were found */
-	if ((paramDfound == SB_FALSE) || (paramBfound == SB_FALSE) || (srecordfound == SB_FALSE))
+	if ((paramDfound == SB_FALSE) || (srecordfound == SB_FALSE))
 	{
 		return SB_FALSE;
 	}

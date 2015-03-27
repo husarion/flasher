@@ -61,10 +61,10 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_PORT_DIR}" "${PROJECT_SOU
 
 # Add sources
 add_executable(flasher_soft 
-  main.cpp
-  xcpmaster.cpp
+	main.cpp
+	xcpmaster.cpp
 	ihex.cpp
-  ${PROJECT_PORT_DIR}/xcptransport.cpp
-  ${PROJECT_PORT_DIR}/timeutil.cpp)
+	${PROJECT_PORT_DIR}/xcptransport.cpp
+	${PROJECT_PORT_DIR}/timeutil.cpp)
 
 #*********************************** end of CMakeLists.txt ******************************
