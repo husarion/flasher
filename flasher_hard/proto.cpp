@@ -1,8 +1,9 @@
 #include "proto.h"
+#include "uart.h"
 
 #define TIMEOUT (1000)
 
-SerialHandle handle = -1;
+SerialHandle handle = 0;
 
 int uart_send_cmd(uint8_t cmd)
 {
@@ -38,25 +39,28 @@ int uart_read_byte()
 	int r = uart_rx(handle, &b, 1, TIMEOUT);
 	return r == -1 ? -1 : b;
 }
-int uart_read_data(char* data, int len)
+int uart_read_data(void* data, int len)
 {
-	int r = uart_rx(handle, data, len, TIMEOUT * len);
+	uint8_t* _data = (uint8_t*)data;
+	int r = uart_rx(handle, _data, len, TIMEOUT * len);
 	return r == -1 ? -1 : r;
 }
 
-int uart_write_data_checksum(const char* data, int len)
+int uart_write_data_checksum(const void* data, int len)
 {
-	char chk = data[0];
+	const uint8_t* _data = (uint8_t*)data;
+	char chk = _data[0];
 	for (int i = 1; i < len; i++)
-		chk ^= data[i];
-	int w = uart_tx(handle, data, len);
+		chk ^= _data[i];
+	int w = uart_tx(handle, _data, len);
 	if (w == -1) return -1;
 	w = uart_tx(handle, &chk, 1);
 	return w == -1 ? -1 : len;
 }
-int uart_write_data(const char* data, int len)
+int uart_write_data(const void* data, int len)
 {
-	int w = uart_tx(handle, data, len);
+	const uint8_t* _data = (uint8_t*)data;
+	int w = uart_tx(handle, _data, len);
 	return w == -1 ? -1 : len;
 }
 int uart_write_byte(char data)

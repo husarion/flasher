@@ -16,6 +16,6 @@ int getID();
 int readoutUnprotect();
 int writeUnprotect();
 int readoutProtect();
-int erase(const vector<int>& excludedPages);
+int erase();
 
 #endif

@@ -20,6 +20,8 @@ using namespace std;
 
 extern stm32_dev_t dev;
 
+extern uint32_t firmwareLen;
+
 int getVersion()
 {
 	int res;
@@ -208,7 +210,16 @@ int writeUnprotect()
 	
 	return 0;
 }
-int erase(const vector<int>& excludedPages)
+int getPageSize(int page)
+{
+	if (page <= 3)
+		return 16 * 1024;
+	if (page == 4)
+		return 64 * 1024;
+	else
+		return 128 * 1024;
+}
+int erase()
 {
 	int res;
 	
@@ -226,27 +237,54 @@ int erase(const vector<int>& excludedPages)
 		
 		printf("Erase ACK'ed\n");
 		
-		if (excludedPages.size() == 0)
+		// if (excludedPages.size() == 0)
+		// {
+		// uart_write_data_checksum("\xff\xff", 2);
+		// }
+		// else
 		{
-			uart_write_data_checksum("\xff\xff", 2);
-		}
-		else
-		{
-			int maxPages = 128;
-			uint16_t pages = maxPages - 1 - excludedPages.size();
+		
+			uint32_t curAddr = 0;
+			int startPage=-1;
+			int endPage;
+			// firmwareLen=
+			for (int i = 0; i < 256; i++)
+			{
+				uint32_t start = curAddr;
+				uint32_t end = start + getPageSize(i);
+				printf("s 0x%08x e 0x%08x 0x%08x\r\n", start, end, getPageSize(i));
+				curAddr += getPageSize(i);
+				
+				if (startPage==-1 && start >= 0x00008000)
+				{
+					startPage = i;
+				}
+				if (end > firmwareLen + 0x00008000)
+				{
+					endPage = i;
+					break;
+				}
+			}
+			
+			printf("sp %d ep %d\r\n", startPage, endPage);
+			// exit(0);
+			
+			// int startPage = 2;
+			int pagesToEraseCnt = endPage - startPage + 1;//(firmwareLen + pageSize - 1) / pageSize;
+			printf("pages %d\r\n", pagesToEraseCnt);
+			uint16_t pages = pagesToEraseCnt - 1;
 			
 			uint8_t data[2 + (pages + 1) * 2];
 			data[0] = pages >> 8;
 			data[1] = pages & 0xff;
 			int idx = 1;
-			for (uint16_t i = 0; i < maxPages; i++)
+			for (uint16_t i = 0; i < pagesToEraseCnt; i++)
 			{
-				if (find(excludedPages.begin(), excludedPages.end(), i) != excludedPages.end())
-				{
-					data[2 + idx * 2] = i >> 8;
-					data[2 + idx * 2 + 1] = i & 0xff;
-					idx++;
-				}
+				int pageNr = startPage + i;
+				printf("page %d\r\n", pageNr);
+				data[2 + idx * 2] = pageNr >> 8;
+				data[2 + idx * 2 + 1] = pageNr & 0xff;
+				idx++;
 			}
 			
 			uart_write_data_checksum(data, sizeof(data));
@@ -271,49 +309,50 @@ int erase(const vector<int>& excludedPages)
 	}
 	else if (dev.cmds[ERASE] == 0x43)
 	{
-		printf("erasing device with standard Erase command\n");
+		return -1;
+		// printf("erasing device with standard Erase command\n");
 		
-		uart_send_cmd(0x43);
-		int res = uart_read_ack_nack();
-		if (res == ACK)
-		{
-			if (excludedPages.size() == 0)
-			{
-				uart_send_cmd(0xff);
-			}
-			else
-			{
-				int maxPages = 128;
-				uint16_t pages = maxPages - 1 - excludedPages.size();
-				
-				uint8_t data[1 + pages + 1];
-				int idx = 1;
-				data[0] = pages;
-				for (uint16_t i = 0; i < maxPages; i++)
-					if (find(excludedPages.begin(), excludedPages.end(), i) == excludedPages.end())
-						data[idx++] = i;
-						
-				uart_write_data_checksum(data, sizeof(data));
-			}
-			
-retry:
-			res = uart_read_ack_nack();
-			printf("res: 0x%x\n", res);
-			if (res != ACK && res != NACK)
-				goto retry;
-			if (res == NACK)
-			{
-				printf("device NACKed\n");
-				return -1;
-			}
-			printf("device erased\n");
-			return 0;
-		}
-		else
-		{
-			printf("NACK received 0x%02x\n", res);
-			return -1;
-		}
+		// uart_send_cmd(0x43);
+		// int res = uart_read_ack_nack();
+		// if (res == ACK)
+		// {
+		// if (excludedPages.size() == 0)
+		// {
+		// uart_send_cmd(0xff);
+		// }
+		// else
+		// {
+		// int pagesToEraseCnt = 128;
+		// uint16_t pages = pagesToEraseCnt - 1 - excludedPages.size();
+		
+		// uint8_t data[1 + pages + 1];
+		// int idx = 1;
+		// data[0] = pages;
+		// for (uint16_t i = 0; i < pagesToEraseCnt; i++)
+		// if (find(excludedPages.begin(), excludedPages.end(), i) == excludedPages.end())
+		// data[idx++] = i;
+		
+		// uart_write_data_checksum(data, sizeof(data));
+		// }
+		
+// retry:
+		// res = uart_read_ack_nack();
+		// printf("res: 0x%x\n", res);
+		// if (res != ACK && res != NACK)
+		// goto retry;
+		// if (res == NACK)
+		// {
+		// printf("device NACKed\n");
+		// return -1;
+		// }
+		// printf("device erased\n");
+		// return 0;
+		// }
+		// else
+		// {
+		// printf("NACK received 0x%02x\n", res);
+		// return -1;
+		// }
 	}
 	else
 	{

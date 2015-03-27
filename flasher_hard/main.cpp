@@ -17,7 +17,7 @@
 #include <vector>
 using namespace std;
 
-uint8_t firmwareData[128 * 1024];
+uint8_t firmwareData[1024 * 1024];
 uint32_t firmwareLen;
 
 // device info
@@ -47,6 +47,7 @@ int start()
 	uart_tx(handle, "\x7f", 1);
 	
 	int res = uart_read_ack_nack_fast();
+	printf("res %x\r\n", res);
 	if (res == ACK || res == NACK)
 	{
 		printf("device answered with 0x%02x\n", res);
@@ -64,7 +65,7 @@ int start()
 }
 int programm()
 {
-	uint32_t curAddr = 0x08000000;
+	uint32_t curAddr = 0x08008000;
 	uint32_t sent = 0;
 	
 	uint32_t startTime = getTicks();
@@ -170,15 +171,10 @@ int main(int argc, char** argv)
 {
 	static struct option long_options[] =
 	{
-		/* These options set a flag. */
 		{ "test",  no_argument,       &doTest,  1 },
-		{ "erase", no_argument,       &doErase, 1 },
 		{ "flash", no_argument,       &doFlash, 1 },
-		{ "norun", no_argument,       &noRun, 1 },
 		
-		{ "device",        required_argument, 0, 'd' },
 		{ "speed",         required_argument, 0, 's' },
-		{ "exclude-pages", required_argument, 0, 'p' },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -187,7 +183,7 @@ int main(int argc, char** argv)
 	{
 		int option_index = 0;
 		char *p;
-		int c = getopt_long(argc, argv, "tefnd:s:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "tefs:", long_options, &option_index);
 		if (c == -1)
 			break;
 			
@@ -196,33 +192,8 @@ int main(int argc, char** argv)
 		case 't':
 			doTest = 1;
 			break;
-		case 'e':
-			doErase = 1;
-			break;
-		case 'n':
-			noRun = 1;
-			break;
 		case 'f':
 			doFlash = 1;
-			break;
-		case 'd':
-			devicePath = optarg;
-			break;
-		case 's':
-			speed = getSpeedByBaud(atoi(optarg));
-			if (speed == 0)
-			{
-				printf("unsupported speed\n");
-				return 1;
-			}
-			break;
-		case 'p':
-			p = strtok(optarg, ",");
-			while (p)
-			{
-				excludedPages.push_back(atoi(p));
-				p = strtok(0, ",");
-			}
 			break;
 		}
 	}
@@ -231,10 +202,10 @@ int main(int argc, char** argv)
 	if (optind < argc)
 		filePath = argv[optind];
 		
-	if (!doTest && !doErase && !doFlash)
+	if (!doTest && !doFlash)
 	{
-		printf("no command specified, assuming erase and flash\n");
-		doErase = doFlash = 1;
+		printf("no command specified, assuming test\n");
+		doTest = 1;
 	}
 	
 	if (doFlash)
@@ -260,11 +231,11 @@ int main(int argc, char** argv)
 	
 	for (;;)
 	{
-		if (handle != -1)
+		if (handle)
 			uart_close(handle);
 		printf("opening device %s...\n", devicePath);
 		handle = uart_open(devicePath, speed);
-		if (handle == -1)
+		if (!handle)
 		{
 			perror("unable to open device");
 			return 1;
@@ -278,9 +249,9 @@ int main(int argc, char** argv)
 				break;
 				
 			res = 0;
-			if (doErase && doFlash)
+			if (doFlash)
 			{
-				res = erase(excludedPages);
+				res = erase();
 				if (res == 0)
 				{
 					res = programm();
@@ -299,17 +270,11 @@ int main(int argc, char** argv)
 					}
 				}
 			}
-			else if (doErase)
-			{
-				res = erase(excludedPages);
-				if (res == 0)
-					break;
-			}
 		}
 		usleep(100 * 1000);
 	}
 	
-	if (handle != -1)
+	if (handle)
 		uart_close(handle);
 		
 	return 0;
