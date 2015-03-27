@@ -9,3 +9,4 @@ cmake_install.cmake
 *.bin
 *.elf
 *.map
+flasher_hard

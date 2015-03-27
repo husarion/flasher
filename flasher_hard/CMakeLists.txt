@@ -10,7 +10,7 @@ set(common_flags "")
 set(include_flags "-I ${CMAKE_SOURCE_DIR}/include/")
 set(lib_flags "-L libftdi/")
 
-set(CMAKE_CXX_FLAGS "${include_flags} ${common_flags} -std=c++11")
+set(CMAKE_CXX_FLAGS "${include_flags} ${common_flags}")
 set(CMAKE_C_FLAGS "${include_flags} ${common_flags} -std=c99")
 SET(CMAKE_ASM_FLAGS "${common_flags}")
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
