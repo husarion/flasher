@@ -1,7 +1,7 @@
 /************************************************************************************//**
 * \file         main.c
-* \brief        SerialBoot command line demonstration program for OpenBLT.
-* \ingroup      SerialBoot
+* \brief        flasher_soft command line demonstration program for OpenBLT.
+* \ingroup      flasher_soft
 * \internal
 *----------------------------------------------------------------------------------------
 *                          C O P Y R I G H T
@@ -42,13 +42,14 @@
 #include "xcpmaster.h"                                /* XCP master protocol module    */
 #include "timeutil.h"                                 /* time utility module           */
 
+#include "ihex.h"
 
 /****************************************************************************************
 * Function prototypes
 ****************************************************************************************/
 static void     DisplayProgramInfo(void);
 static void     DisplayProgramUsage(void);
-static sb_uint8 ParseCommandLine(sb_int32 argc, sb_char *argv[]);
+static sb_uint8 ParseCommandLine(int argc, const char *argv[]);
 
 
 /****************************************************************************************
@@ -65,13 +66,13 @@ static sb_uint8 ParseCommandLine(sb_int32 argc, sb_char *argv[]);
 * Local data declarations
 ****************************************************************************************/
 /** \brief Name of the serial device, such as COM4 or /dev/ttyUSB0. */
-static sb_char serialDeviceName[32];
+static char serialDeviceName[32];
 
 /** \brief Serial communication speed in bits per second. */
 static sb_uint32 serialBaudrate;
 
 /** \brief Name of the S-record file. */
-static sb_char srecordFileName[128];
+static char hexFileName[128];
 
 
 /************************************************************************************//**
@@ -81,18 +82,17 @@ static sb_char srecordFileName[128];
 ** \return    0 on success, > 0 on error.
 **
 ****************************************************************************************/
-#include "ihex.h"
-sb_int32 main(sb_int32 argc, sb_char *argv[])
+sb_int32 main(int argc, const char *argv[])
 {
 	IHexFile f;
 	
 	/* disable buffering for the standard output to make sure printf does not wait until
 	 * a newline character is detected before outputting text on the console.
 	 */
-	setbuf(stdout, SB_NULL);
+	setbuf(stdout, 0);
 	
 	/* inform user about the program */
-	DisplayProgramInfo();
+	// DisplayProgramInfo();
 	
 	/* start out by making sure program was started with the correct parameters */
 	if (ParseCommandLine(argc, argv) == SB_FALSE)
@@ -102,10 +102,11 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 		return PROG_RESULT_ERROR;
 	}
 	
-	f.load(srecordFileName);
+	f.load(hexFileName);
 
+	serialBaudrate = 921600;
 	/* -------------------- start the firmware update procedure ------------------------ */
-	printf("Starting firmware update for \"%s\" using %s @ %u bits/s\n", srecordFileName, serialDeviceName, serialBaudrate);
+	printf("Starting firmware update for \"%s\" using %s @ %u bits/s\n", hexFileName, serialDeviceName, serialBaudrate);
 	
 	/* -------------------- Open the serial port --------------------------------------- */
 	printf("Opening serial port %s...", serialDeviceName);
@@ -181,7 +182,6 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 				printf("ERROR\n");
 				XcpMasterDisconnect();
 				XcpMasterDeinit();
-				// SrecordClose(hSrecord);
 				return PROG_RESULT_ERROR;
 			}
 			
@@ -199,7 +199,6 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 		printf("ERROR\n");
 		XcpMasterDisconnect();
 		XcpMasterDeinit();
-		// SrecordClose(hSrecord);
 		return PROG_RESULT_ERROR;
 	}
 	printf("OK\n");
@@ -210,7 +209,6 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 	{
 		printf("ERROR\n");
 		XcpMasterDeinit();
-		// SrecordClose(hSrecord);
 		return PROG_RESULT_ERROR;
 	}
 	printf("OK\n");
@@ -220,8 +218,7 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 	printf("Closed serial port %s\n", serialDeviceName);
 	
 	/* -------------------- close the S-record file ------------------------------------ */
-	// SrecordClose(hSrecord);
-	printf("Closed S-record file \"%s\"\n", srecordFileName);
+	printf("Closed S-record file \"%s\"\n", hexFileName);
 	
 	/* all done */
 	printf("Firmware successfully updated!\n");
@@ -237,7 +234,7 @@ sb_int32 main(sb_int32 argc, sb_char *argv[])
 static void DisplayProgramInfo(void)
 {
 	printf("-------------------------------------------------------------------------\n");
-	printf("SerialBoot version 1.00. Performs firmware updates via the serial port\n");
+	printf("flasher_soft version 1.00. Performs firmware updates via the serial port\n");
 	printf("for a microcontroller based system that runs the OpenBLT bootloader.\n\n");
 	printf("Copyright (c) by Feaser  http://www.feaser.com\n");
 	printf("-------------------------------------------------------------------------\n");
@@ -251,30 +248,30 @@ static void DisplayProgramInfo(void)
 ****************************************************************************************/
 static void DisplayProgramUsage(void)
 {
-	printf("Usage:    SerialBoot -d[device] -b[baudrate] [s-record file]\n\n");
+	printf("Usage:    flasher_soft -d[device] [hex file]\n\n");
 #ifdef PLATFORM_WIN32
-	printf("Example:  SerialBoot -dCOM4 -b57600 myfirmware.s19\n");
-	printf("          -> Connects to COM4, configures a communication speed of 57600\n");
+	printf("Example:  flasher_soft -dCOM4 myfirmware.hex\n");
+	printf("          -> Connects to COM4\n");
 #else
-	printf("Example:  SerialBoot -d/dev/ttyS0 -b57600 myfirmware.s19\n");
-	printf("          -> Connects to ttyS0, configures a communication speed of 57600\n");
+	printf("Example:  flasher_soft -d/dev/ttyUSB0 myfirmware.hex\n");
+	printf("          -> Connects to ttyUSB0\n");
 #endif
-	printf("             bits/second and programs the myfirmware.s19 file in non-\n");
+	printf("             bits/second and programs the myfirmware.hex file in non-\n");
 	printf("             volatile memory of the microcontroller using OpenBLT.\n");
-	printf("-------------------------------------------------------------------------\n");
+	// printf("-------------------------------------------------------------------------\n");
 } /*** end of DisplayProgramUsage ***/
 
 
 /************************************************************************************//**
 ** \brief     Parses the command line arguments. A fixed amount of arguments is expected.
 **            The program should be called as:
-**              SerialBoot -d[device] -b[baudrate] [s-record file]
+**              flasher_soft -d[device] -b[baudrate] [s-record file]
 ** \param     argc Number of program parameters.
 ** \param     argv array to program parameter strings.
 ** \return    SB_TRUE on success, SB_FALSE otherwise.
 **
 ****************************************************************************************/
-static sb_uint8 ParseCommandLine(sb_int32 argc, sb_char *argv[])
+static sb_uint8 ParseCommandLine(int argc, const char *argv[])
 {
 	sb_uint8 paramIdx;
 	sb_uint8 paramDfound = SB_FALSE;
@@ -310,7 +307,7 @@ static sb_uint8 ParseCommandLine(sb_int32 argc, sb_char *argv[])
 		else if (srecordfound == SB_FALSE)
 		{
 			/* copy the file name and set flag that this parameter was found */
-			strcpy(srecordFileName, &argv[paramIdx][0]);
+			strcpy(hexFileName, &argv[paramIdx][0]);
 			srecordfound = SB_TRUE;
 		}
 	}

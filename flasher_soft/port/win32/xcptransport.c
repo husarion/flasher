@@ -70,7 +70,7 @@ static HANDLE hUart = INVALID_HANDLE_VALUE;
 ** \return    SB_TRUE if successful, SB_FALSE otherwise.
 **
 ****************************************************************************************/
-sb_uint8 XcpTransportInit(sb_char *device, sb_uint32 baudrate)
+sb_uint8 XcpTransportInit(const char *device, sb_uint32 baudrate)
 {
   COMMTIMEOUTS timeouts = { 0 };
   DCB dcbSerialParams = { 0 };

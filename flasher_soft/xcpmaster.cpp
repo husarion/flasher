@@ -112,7 +112,7 @@ static tXcpTransportResponsePacket responsePacket;
 ** \return    SB_TRUE is successful, SB_FALSE otherwise.
 **
 ****************************************************************************************/
-sb_uint8 XcpMasterInit(sb_char *device, sb_uint32 baudrate)
+sb_uint8 XcpMasterInit(const char *device, sb_uint32 baudrate)
 {
   /* initialize the underlying transport layer that is used for the communication */
   return XcpTransportInit(device, baudrate);
@@ -188,7 +188,7 @@ sb_uint8 XcpMasterStartProgrammingSession(void)
 sb_uint8 XcpMasterStopProgrammingSession(void)
 {
   /* stop programming by sending the program command with size 0 */
-  if (XcpMasterSendCmdProgram(0, SB_NULL) == SB_FALSE)
+  if (XcpMasterSendCmdProgram(0, 0) == SB_FALSE)
   {
     return SB_FALSE;
   }

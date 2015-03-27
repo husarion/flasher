@@ -51,7 +51,7 @@ sb_uint32 TimeUtilGetSystemTimeMs(void)
 {
  struct timeval tv;
 
- if (gettimeofday(&tv, SB_NULL) != 0)
+ if (gettimeofday(&tv, 0) != 0)
  {
    return 0;
  }

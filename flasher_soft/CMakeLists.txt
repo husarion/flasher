@@ -32,20 +32,22 @@
 #****************************************************************************************
 
 # Specify the version being used aswell as the language
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # Specify the project name
-project(SerialBoot)
+project(flasher_soft)
 
 # Set the port directory, which is platform specific
 IF(WIN32)
   set(PROJECT_PORT_DIR ${PROJECT_SOURCE_DIR}/port/win32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS")
-  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS -fpermissive")
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS")
 ELSEIF(UNIX)
   set(PROJECT_PORT_DIR ${PROJECT_SOURCE_DIR}/port/linux)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_LINUX")
-  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_LINUX -fpermissive")
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_LINUX")
 ENDIF(WIN32)
 
 # Build debug version by default
@@ -58,15 +60,11 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_PORT_DIR}" "${PROJECT_SOU
 # file(GLOB_RECURSE INCS "*.h")
 
 # Add sources
-add_executable(
-  SerialBoot 
+add_executable(flasher_soft 
   main.cpp
   xcpmaster.cpp
 	ihex.cpp
   ${PROJECT_PORT_DIR}/xcptransport.cpp
-  ${PROJECT_PORT_DIR}/timeutil.cpp
-  ${INCS}
-)
-
+  ${PROJECT_PORT_DIR}/timeutil.cpp)
 
 #*********************************** end of CMakeLists.txt ******************************
