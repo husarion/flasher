@@ -67,4 +67,10 @@ add_executable(flasher_soft
 	${PROJECT_PORT_DIR}/xcptransport.cpp
 	${PROJECT_PORT_DIR}/timeutil.cpp)
 
+option(X86 "32 bit executable" OFF)
+
+if(X86)
+	set_target_properties(flasher_soft PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif()
+
 #*********************************** end of CMakeLists.txt ******************************
