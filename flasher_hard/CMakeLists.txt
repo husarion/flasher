@@ -20,8 +20,10 @@ SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 add_executable(flasher_hard
 	main.cpp uart.cpp proto.cpp cmds.cpp)
 
+# target_link_libraries(flasher_hard
+	# ftdi1 ftdipp1 usb-1.0)
 target_link_libraries(flasher_hard
-	ftdi1 ftdipp1 usb-1.0)
+	ftdi usb-1.0)
 
 if(WIN32)
 	add_custom_target(copy ALL COMMENT "Copying files...")
