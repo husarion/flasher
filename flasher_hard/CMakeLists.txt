@@ -8,6 +8,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 if(WIN32)
 	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/windows/")
 	set(lib_flags "-L  ${CMAKE_SOURCE_DIR}/port/windows/")
+else()
+	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/linux/ -I /usr/include/libusb-1.0/")
 endif()
 
 set(CMAKE_EXE_LINKER_FLAGS "${lib_flags}")
@@ -17,10 +19,11 @@ SET(CMAKE_ASM_FLAGS "${common_flags}")
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-add_executable(flasher_hard
-	main.cpp uart.cpp proto.cpp cmds.cpp)
 
 if(WIN32)
+	add_executable(flasher_hard
+		main.cpp uart.cpp proto.cpp cmds.cpp)
+
 	target_link_libraries(flasher_hard
 		ftdi1 usb-1.0)
 
@@ -30,8 +33,12 @@ if(WIN32)
 	add_custom_command(TARGET copy
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_SOURCE_DIR}/bin/)
 else()
+	add_executable(flasher_hard
+		main.cpp uart.cpp proto.cpp cmds.cpp
+		port/linux/ftdi.c port/linux/ftdi_stream.c)
+
 	target_link_libraries(flasher_hard
-		ftdi usb-1.0)
+		usb-1.0)
 endif()
 
 option(X86 "32 bit executable" OFF)
