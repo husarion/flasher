@@ -13,14 +13,16 @@
 #include "proto.h"
 #include "uart.h"
 #include "devices.h"
+#include "ihex.h"
 
 #include <algorithm>
+#include <map>
 
 using namespace std;
 
 extern stm32_dev_t dev;
 
-extern uint32_t firmwareLen;
+extern IHexFile hexFile;
 
 int getVersion()
 {
@@ -237,58 +239,41 @@ int erase()
 		
 		printf("Erase ACK'ed\n");
 		
-		// if (excludedPages.size() == 0)
-		// {
-		// uart_write_data_checksum("\xff\xff", 2);
-		// }
-		// else
-		{
+		map<int, int> pages;
 		
-			uint32_t curAddr = 0;
-			int startPage=-1;
-			int endPage;
-			// firmwareLen=
-			for (int i = 0; i < 256; i++)
+		// TODO: optimize
+		for (int i = 0; i < hexFile.parts.size(); i++)
+		{
+			TPart* part = hexFile.parts[i];
+			for (uint32_t addr = part->getStartAddr(); addr <= part->getEndAddr(); addr += 256)
 			{
-				uint32_t start = curAddr;
-				uint32_t end = start + getPageSize(i);
-				printf("s 0x%08x e 0x%08x 0x%08x\r\n", start, end, getPageSize(i));
-				curAddr += getPageSize(i);
-				
-				if (startPage==-1 && start >= 0x00008000)
+				for (int j = 0; j < flashPages; j++)
 				{
-					startPage = i;
-				}
-				if (end > firmwareLen + 0x00008000)
-				{
-					endPage = i;
-					break;
+					if (addr >= flashLayout[j].sector_start && addr <= flashLayout[j].sector_start + flashLayout[j].sector_size - 1)
+					{
+						pages[flashLayout[j].sector_num] = 1;
+					}
 				}
 			}
-			
-			printf("sp %d ep %d\r\n", startPage, endPage);
-			// exit(0);
-			
-			// int startPage = 2;
-			int pagesToEraseCnt = endPage - startPage + 1;//(firmwareLen + pageSize - 1) / pageSize;
-			printf("pages %d\r\n", pagesToEraseCnt);
-			uint16_t pages = pagesToEraseCnt - 1;
-			
-			uint8_t data[2 + (pages + 1) * 2];
-			data[0] = pages >> 8;
-			data[1] = pages & 0xff;
-			int idx = 1;
-			for (uint16_t i = 0; i < pagesToEraseCnt; i++)
-			{
-				int pageNr = startPage + i;
-				printf("page %d\r\n", pageNr);
-				data[2 + idx * 2] = pageNr >> 8;
-				data[2 + idx * 2 + 1] = pageNr & 0xff;
-				idx++;
-			}
-			
-			uart_write_data_checksum(data, sizeof(data));
 		}
+		
+		int pagesToEraseCnt = pages.size();
+		printf("pages to erase %d\r\n", pagesToEraseCnt);
+		
+		uint8_t data[2 + pagesToEraseCnt * 2];
+		data[0] = (pagesToEraseCnt - 1) >> 8;
+		data[1] = (pagesToEraseCnt - 1) & 0xff;
+		int idx = 0;
+		for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
+		{
+			int pageNr = it->first;
+			printf("page %d\r\n", pageNr);
+			data[2 + idx * 2] = pageNr >> 8;
+			data[2 + idx * 2 + 1] = pageNr & 0xff;
+			idx++;
+		}
+		
+		uart_write_data_checksum(data, sizeof(data));
 		
 		res = uart_read_ack_nack(40000);
 		if (res == ACK)

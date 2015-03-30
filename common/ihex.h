@@ -32,8 +32,7 @@ public:
 	
 	int load(const std::string& path);
 	
-	uint8_t *data;
-	int length;
+	int totalLength;
 	
 	std::vector<TPart*> parts;
 	

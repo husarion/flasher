@@ -12,12 +12,12 @@
 #include "uart.h"
 #include "devices.h"
 #include "cmds.h"
+#include "ihex.h"
 
 #include <vector>
 using namespace std;
 
-uint8_t firmwareData[1024 * 1024];
-uint32_t firmwareLen;
+IHexFile hexFile;
 
 // device info
 stm32_dev_t dev;
@@ -56,70 +56,138 @@ int start()
 	}
 	return -1;
 }
+
+uint32_t SWAP32(uint32_t v)
+{
+	return ((v & 0x000000ff) << 24) | ((v & 0x0000ff00) << 8) |
+	       ((v & 0x00ff0000) >> 8) | ((v & 0xff000000) >> 24);
+}
+
 int programm()
 {
+	char buf[256 + 1];
+	
 	uint32_t curAddr = 0x08008000;
 	uint32_t sent = 0;
 	
 	uint32_t startTime = getTicks();
 	
-	while (sent < firmwareLen)
+	for (int i = 0; i < hexFile.parts.size(); i++)
 	{
-		printf("sending page of addr: 0x%08x...\n", curAddr);
-		uart_send_cmd(0x31);
+		TPart* part = hexFile.parts[i];
 		
-		int res = uart_read_ack_nack();
-		if (res == ACK)
+		uint32_t curAddr = part->getStartAddr();
+		uint8_t* data = part->data.data();
+		
+		while (curAddr < part->getEndAddr())
 		{
-			uint32_t tmp = ((curAddr & 0x000000ff) << 24) | ((curAddr & 0x0000ff00) << 8) |
-			               ((curAddr & 0x00ff0000) >> 8) | ((curAddr & 0xff000000) >> 24);
-			uart_write_data_checksum((char*)&tmp, 4);
+			int len = part->getEndAddr() - curAddr;
+			if (len > 256) len = 256;
 			
-			res = uart_read_ack_nack();
+			printf("writing 0x%08x len: %d...\n", curAddr, len);
+			
+			uart_send_cmd(0x31);
+			
+			int res = uart_read_ack_nack();
 			if (res == ACK)
 			{
-				int left = firmwareLen - sent;
-				if (left > 256) left = 256;
-				
-				printf("to send: %d\n", left);
-				
-				char buf[1000];
-				
-				memcpy(buf + 1, firmwareData + sent, left);
-				
-				buf[0] = left - 1;
-				
-				uart_write_data_checksum(buf, left + 1);
+				uint32_t tmp = SWAP32(curAddr);
+				uart_write_data_checksum((char*)&tmp, 4);
 				
 				res = uart_read_ack_nack();
-				printf("ack: 0x%02x\n", res);
-				
 				if (res == ACK)
 				{
-					sent += left;
-					curAddr += left;
-					printf("ok 0x%08x %d of %d\n", curAddr, sent, firmwareLen);
-				}
-				else
-				{
-					return -1;
+					printf("to send: %d\n", len);
+					
+					buf[0] = len - 1;
+					memcpy(buf + 1, data, len);
+					
+					uart_write_data_checksum(buf, len + 1);
+					res = uart_read_ack_nack();
+					
+					if (res == ACK)
+					{
+						sent += len;
+						curAddr += len;
+						data += len;
+						printf("ok 0x%08x %d of %d\n", curAddr, sent, hexFile.totalLength);
+					}
+					else
+					{
+						printf("failed\n");
+						return -1;
+					}
 				}
 			}
+			else
+			{
+				return -1;
+			}
 		}
-		else
-		{
-			return -1;
-		}
+		
+		
+		
+		
+		// while (sent < firmwareLen)
+		// {
+		// printf("sending page of addr: 0x%08x...\n", curAddr);
+		// uart_send_cmd(0x31);
+		
+		// int res = uart_read_ack_nack();
+		// if (res == ACK)
+		// {
+		// uint32_t tmp = ((curAddr & 0x000000ff) << 24) | ((curAddr & 0x0000ff00) << 8) |
+		// ((curAddr & 0x00ff0000) >> 8) | ((curAddr & 0xff000000) >> 24);
+		// uart_write_data_checksum((char*)&tmp, 4);
+		
+		// res = uart_read_ack_nack();
+		// if (res == ACK)
+		// {
+		// int left = firmwareLen - sent;
+		// if (left > 256) left = 256;
+		
+		// printf("to send: %d\n", left);
+		
+		// char buf[1000];
+		
+		// memcpy(buf + 1, firmwareData + sent, left);
+		// memset(buf + 1, 0xef, left);
+		
+		// buf[0] = left - 1;
+		
+		// uart_write_data_checksum(buf, left + 1);
+		
+		// res = uart_read_ack_nack();
+		// printf("ack: 0x%02x\n", res);
+		
+		// if (res == ACK)
+		// {
+		// sent += left;
+		// curAddr += left;
+		// printf("ok 0x%08x %d of %d\n", curAddr, sent, firmwareLen);
+		// }
+		// else
+		// {
+		// return -1;
+		// }
+		// }
+		// }
+		// else
+		// {
+		// return -1;
+		// }
+		// }
 	}
 	
 	uint32_t endTime = getTicks();
 	float time = endTime - startTime;
-	float avg = firmwareLen / (time / 1000.0f) / 1024.0f;
+	float avg = hexFile.totalLength / (time / 1000.0f) / 1024.0f;
 	
 	printf("time: %d ms avg speed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 	
 	return 0;
 }
+
 int run(uint32_t addr)
 {
 	printf("go to 0x%08x...\n", addr);
@@ -163,7 +231,7 @@ int run(uint32_t addr)
 int main(int argc, char** argv)
 {
 	int speed = 460800;
-
+	
 	static struct option long_options[] =
 	{
 		{ "test",  no_argument,       &doTest,  1 },
@@ -212,15 +280,7 @@ int main(int argc, char** argv)
 	{
 		if (filePath)
 		{
-			FILE *file = fopen(filePath, "rb");
-			firmwareLen = fread(firmwareData, 1, sizeof(firmwareData), file);
-			fclose(file);
-			
-			while ((firmwareLen % 4) != 0)
-			{
-				firmwareData[firmwareLen] = 0xff;
-				firmwareLen++;
-			}
+			hexFile.load(filePath);
 		}
 		else
 		{
@@ -271,6 +331,8 @@ int main(int argc, char** argv)
 		
 	return 0;
 }
+
+
 
 
 

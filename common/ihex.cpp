@@ -32,14 +32,11 @@ int str2int(string str)
 	return val;
 }
 
-const int SIZE = 1024 * 1024 * 5;
 IHexFile::IHexFile()
 {
-	data = new uint8_t[SIZE];
 }
 IHexFile::~IHexFile()
 {
-	delete [] data;
 }
 #include <unistd.h>
 
@@ -49,31 +46,17 @@ int IHexFile::load(const std::string& path)
 	if (!f)
 		return false;
 	uint32_t maxAddr = 0;
+	uint32_t extAddr2 = 0, extAddr4 = 0;
 	char lineData[128];
-	// while (fgets (lineData, sizeof (lineData), f) != NULL)
-	// {
-	// string line = lineData;
-	// uint16_t len = strhex2int (line.substr (1, 2));
-	// uint16_t addr = strhex2int (line.substr (3, 4));
-	// // addr -= 0x00004000;
-	// string type = line.substr (7, 2);
-	// if (type == "00")
-	// for (int i = 0; i < len; i++)
-	// maxAddr = addr + i;
-	// }
-	printf("maxAddr: %d\n", maxAddr);
-	// hexFile->data = new uint8_t[maxAddr];
-	// hexFile->length = maxAddr;
-	memset(data, 0xff, SIZE);
-	uint32_t extAddr2=0, extAddr4=0;
+	totalLength = 0;
 	// fseek(f, 0, SEEK_SET);
 	while (fgets(lineData, sizeof(lineData), f) != NULL)
 	{
 		string line = lineData;
 		uint32_t len = strhex2int(line.substr(1, 2));
 		uint32_t addr = strhex2int(line.substr(3, 4));
-			// printf("addr 0x%08x\r\n", addr);
-			// return 0;
+		// printf("addr 0x%08x\r\n", addr);
+		// return 0;
 		int type = str2int(line.substr(7, 2));
 		switch (type)
 		{
@@ -84,6 +67,7 @@ int IHexFile::load(const std::string& path)
 			TPart *p = findPart(dstAddr);
 			// printf("got part 0x%08x cur len: %d\r\n", p->startAddr, p->data.size());
 			// usleep(10000);
+			totalLength += len;
 			for (int i = 0; i < len; i++)
 			{
 				uint32_t dstAddr = extAddr4 + extAddr2 + addr + i;

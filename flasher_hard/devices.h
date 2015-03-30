@@ -27,6 +27,16 @@ struct stm32_dev_info_t
 	int sectors;
 };
 
+typedef struct 
+{
+  uint32_t sector_start;
+  uint32_t sector_size;
+  uint32_t sector_num;
+} tFlashSector;
+
+extern const tFlashSector flashLayout[];
+extern const int flashPages;
+
 extern stm32_dev_info_t devices[];
 
 stm32_dev_info_t* findDeviceInfo(const stm32_dev_t& device);
