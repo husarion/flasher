@@ -54,6 +54,8 @@ if(CROSS)
 	set(CMAKE_C_COMPILER "i686-w64-mingw32-gcc")
 	set(CMAKE_CXX_COMPILER "i686-w64-mingw32-g++")
 endif()
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
 # Build debug version by default
 # set(CMAKE_BUILD_TYPE "Debug")
