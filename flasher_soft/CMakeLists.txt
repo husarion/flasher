@@ -56,7 +56,7 @@ if(CROSS)
 endif()
 
 # Build debug version by default
-set(CMAKE_BUILD_TYPE "Debug")
+# set(CMAKE_BUILD_TYPE "Debug")
 
 # Set include directories
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_PORT_DIR}" "${PROJECT_SOURCE_DIR}/port")
@@ -73,6 +73,17 @@ IF(WIN32)
 		../common/ihex.cpp
 		${PROJECT_PORT_DIR}/xcptransport.cpp
 		${PROJECT_PORT_DIR}/timeutil.cpp)
+
+	if(CROSS)
+		add_custom_target(copy ALL COMMENT "Copying files...")
+
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_SOURCE_DIR}/bin/)
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+	endif()
 ELSEIF(UNIX)
 	add_executable(flasher_soft 
 		main.cpp
