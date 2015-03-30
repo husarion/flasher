@@ -25,10 +25,10 @@ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
 if(WIN32)
-	add_executable(flasher_hard
+	add_executable(flasher_hard.exe
 		main.cpp uart.cpp proto.cpp cmds.cpp devices.cpp ../common/ihex.cpp)
 
-	target_link_libraries(flasher_hard
+	target_link_libraries(flasher_hard.exe
 		ftdi1 usb-1.0)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")

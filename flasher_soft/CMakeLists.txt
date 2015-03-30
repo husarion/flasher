@@ -66,12 +66,21 @@ include_directories("../common")
 # file(GLOB_RECURSE INCS "*.h")
 
 # Add sources
-add_executable(flasher_soft 
-	main.cpp
-	xcpmaster.cpp
-	../common/ihex.cpp
-	${PROJECT_PORT_DIR}/xcptransport.cpp
-	${PROJECT_PORT_DIR}/timeutil.cpp)
+IF(WIN32)
+	add_executable(flasher_soft.exe
+		main.cpp
+		xcpmaster.cpp
+		../common/ihex.cpp
+		${PROJECT_PORT_DIR}/xcptransport.cpp
+		${PROJECT_PORT_DIR}/timeutil.cpp)
+ELSEIF(UNIX)
+	add_executable(flasher_soft 
+		main.cpp
+		xcpmaster.cpp
+		../common/ihex.cpp
+		${PROJECT_PORT_DIR}/xcptransport.cpp
+		${PROJECT_PORT_DIR}/timeutil.cpp)
+ENDIF()
 
 option(X86 "32 bit executable" OFF)
 
