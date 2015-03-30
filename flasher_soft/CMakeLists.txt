@@ -55,6 +55,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 # Set include directories
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_PORT_DIR}" "${PROJECT_SOURCE_DIR}/port")
+include_directories("../common")
 
 # Get header files
 # file(GLOB_RECURSE INCS "*.h")
@@ -63,7 +64,7 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_PORT_DIR}" "${PROJECT_SOU
 add_executable(flasher_soft 
 	main.cpp
 	xcpmaster.cpp
-	ihex.cpp
+	../common/ihex.cpp
 	${PROJECT_PORT_DIR}/xcptransport.cpp
 	${PROJECT_PORT_DIR}/timeutil.cpp)
 
