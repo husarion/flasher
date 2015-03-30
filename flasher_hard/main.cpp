@@ -124,59 +124,6 @@ int programm()
 				return -1;
 			}
 		}
-		
-		
-		
-		
-		// while (sent < firmwareLen)
-		// {
-		// printf("sending page of addr: 0x%08x...\n", curAddr);
-		// uart_send_cmd(0x31);
-		
-		// int res = uart_read_ack_nack();
-		// if (res == ACK)
-		// {
-		// uint32_t tmp = ((curAddr & 0x000000ff) << 24) | ((curAddr & 0x0000ff00) << 8) |
-		// ((curAddr & 0x00ff0000) >> 8) | ((curAddr & 0xff000000) >> 24);
-		// uart_write_data_checksum((char*)&tmp, 4);
-		
-		// res = uart_read_ack_nack();
-		// if (res == ACK)
-		// {
-		// int left = firmwareLen - sent;
-		// if (left > 256) left = 256;
-		
-		// printf("to send: %d\n", left);
-		
-		// char buf[1000];
-		
-		// memcpy(buf + 1, firmwareData + sent, left);
-		// memset(buf + 1, 0xef, left);
-		
-		// buf[0] = left - 1;
-		
-		// uart_write_data_checksum(buf, left + 1);
-		
-		// res = uart_read_ack_nack();
-		// printf("ack: 0x%02x\n", res);
-		
-		// if (res == ACK)
-		// {
-		// sent += left;
-		// curAddr += left;
-		// printf("ok 0x%08x %d of %d\n", curAddr, sent, firmwareLen);
-		// }
-		// else
-		// {
-		// return -1;
-		// }
-		// }
-		// }
-		// else
-		// {
-		// return -1;
-		// }
-		// }
 	}
 	
 	uint32_t endTime = getTicks();

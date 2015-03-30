@@ -212,15 +212,6 @@ int writeUnprotect()
 	
 	return 0;
 }
-int getPageSize(int page)
-{
-	if (page <= 3)
-		return 16 * 1024;
-	if (page == 4)
-		return 64 * 1024;
-	else
-		return 128 * 1024;
-}
 int erase()
 {
 	int res;
@@ -294,50 +285,7 @@ int erase()
 	}
 	else if (dev.cmds[ERASE] == 0x43)
 	{
-		return -1;
-		// printf("erasing device with standard Erase command\n");
-		
-		// uart_send_cmd(0x43);
-		// int res = uart_read_ack_nack();
-		// if (res == ACK)
-		// {
-		// if (excludedPages.size() == 0)
-		// {
-		// uart_send_cmd(0xff);
-		// }
-		// else
-		// {
-		// int pagesToEraseCnt = 128;
-		// uint16_t pages = pagesToEraseCnt - 1 - excludedPages.size();
-		
-		// uint8_t data[1 + pages + 1];
-		// int idx = 1;
-		// data[0] = pages;
-		// for (uint16_t i = 0; i < pagesToEraseCnt; i++)
-		// if (find(excludedPages.begin(), excludedPages.end(), i) == excludedPages.end())
-		// data[idx++] = i;
-		
-		// uart_write_data_checksum(data, sizeof(data));
-		// }
-		
-// retry:
-		// res = uart_read_ack_nack();
-		// printf("res: 0x%x\n", res);
-		// if (res != ACK && res != NACK)
-		// goto retry;
-		// if (res == NACK)
-		// {
-		// printf("device NACKed\n");
-		// return -1;
-		// }
-		// printf("device erased\n");
-		// return 0;
-		// }
-		// else
-		// {
-		// printf("NACK received 0x%02x\n", res);
-		// return -1;
-		// }
+		return -1; // not supported
 	}
 	else
 	{
