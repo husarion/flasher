@@ -8,8 +8,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 if(WIN32)
 	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/windows/ -I ../common")
 	set(lib_flags "-L  ${CMAKE_SOURCE_DIR}/port/windows/")
-else()
+elseif(UNIX)
 	set(include_flags "-I ${CMAKE_SOURCE_DIR}/port/linux/ -I ../common -I /usr/include/libusb-1.0/")
+endif()
+
+if(CROSS)
+	set(CMAKE_C_COMPILER "i686-w64-mingw32-gcc")
+	set(CMAKE_CXX_COMPILER "i686-w64-mingw32-g++")
 endif()
 
 set(CMAKE_EXE_LINKER_FLAGS "${lib_flags}")
@@ -18,7 +23,6 @@ set(CMAKE_C_FLAGS "${include_flags} ${common_flags} -std=c99")
 SET(CMAKE_ASM_FLAGS "${common_flags}")
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
-
 
 if(WIN32)
 	add_executable(flasher_hard
@@ -32,7 +36,16 @@ if(WIN32)
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_SOURCE_DIR}/bin/)
 	add_custom_command(TARGET copy
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_SOURCE_DIR}/bin/)
-else()
+
+	if(CROSS)
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_SOURCE_DIR}/bin/)
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+		add_custom_command(TARGET copy
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+	endif()
+elseif(UNIX)
 	add_executable(flasher_hard
 		main.cpp uart.cpp proto.cpp cmds.cpp devices.cpp ../common/ihex.cpp
 		port/linux/ftdi.c port/linux/ftdi_stream.c)

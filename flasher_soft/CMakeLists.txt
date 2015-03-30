@@ -50,6 +50,11 @@ ELSEIF(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DPLATFORM_LINUX")
 ENDIF(WIN32)
 
+if(CROSS)
+	set(CMAKE_C_COMPILER "i686-w64-mingw32-gcc")
+	set(CMAKE_CXX_COMPILER "i686-w64-mingw32-g++")
+endif()
+
 # Build debug version by default
 set(CMAKE_BUILD_TYPE "Debug")
 
