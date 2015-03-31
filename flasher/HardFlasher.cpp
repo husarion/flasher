@@ -23,16 +23,19 @@ uint32_t SWAP32(uint32_t v)
 int HardFlasher::init()
 {
 	m_serial = 0;
+	return 0;
 }
 int HardFlasher::open()
 {
 	printf("opening device...\n");
 	m_serial = uart_open(m_baudrate);
+	return 0;
 }
 int HardFlasher::close()
 {
 	if (m_serial)
 		uart_close(m_serial);
+	return 0;
 }
 int HardFlasher::start()
 {
@@ -269,9 +272,9 @@ int HardFlasher::flash()
 		uint32_t curAddr = part->getStartAddr();
 		uint8_t* data = part->data.data();
 		
-		while (curAddr < part->getEndAddr())
+		while (curAddr <= part->getEndAddr())
 		{
-			int len = part->getEndAddr() - curAddr;
+			int len = part->getEndAddr() - curAddr + 1;
 			if (len > 256) len = 256;
 			
 			printf("writing 0x%08x len: %d...\n", curAddr, len);

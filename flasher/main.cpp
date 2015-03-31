@@ -16,6 +16,7 @@
 
 #include "Flasher.h"
 #include "HardFlasher.h"
+#include "SoftFlasher.h"
 
 #include <vector>
 using namespace std;
@@ -34,6 +35,11 @@ void usage(char** argv)
 {
 	fprintf(stderr, "Usage: %s [--hard] [--speed speed] file.hex\n", argv[0]);
 	fprintf(stderr, "       %s --soft --device /dev/ttyUSB0 file.hex\n", argv[0]);
+}
+
+void callback(uint32_t cur, uint32_t total)
+{
+	printf("%d %d\r\n", cur, total);
 }
 
 int main(int argc, char** argv)
@@ -91,15 +97,28 @@ int main(int argc, char** argv)
 	}
 	if (doSoft)
 	{
-		// flasher = new SoftFlasher();
+		flasher = new SoftFlasher();
+		flasher->setBaudrate(921600);
 		flasher->setDevice(device);
 	}
-	flasher->load(filePath);
+	flasher->setCallback(&callback);
+	int res;
+	res = flasher->load(filePath);
+	if(res != 0)
+	{
+		fprintf(stderr, "unable to load hex file\n");
+		return 1;
+	}
 	
-	flasher->init();
+	res = flasher->init();
+	if(res != 0)
+	{
+		fprintf(stderr, "unable to initialize flasher\n");
+		return 1;
+	}
 
 try_flash:
-	int res = flasher->start();
+	res = flasher->start();
 	if (res == 0)
 	{
 		res = flasher->erase();
@@ -121,6 +140,11 @@ try_flash:
 		{
 			goto try_flash;
 		}
+	}
+	else
+	{
+		fprintf(stderr, "unable to start flashing\n");
+		return 1;
 	}
 	
 	flasher->close();

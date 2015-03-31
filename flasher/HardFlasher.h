@@ -10,20 +10,21 @@ class HardFlasher : public Flasher
 {
 public:
 	int init();
-	int open();
-	int close();
 	int start();
+	int erase();
+	int flash();
 	
 private:
 	stm32_dev_t m_dev;
 	SerialHandle m_serial;
+
+	int open();
+	int close();
 	
 	// commands
 	int getVersion();
 	int getCommand();
 	int getID();
-	int erase();
-	int flash();
 	
 	// low-level protocol
 	int uart_send_cmd(uint8_t cmd);

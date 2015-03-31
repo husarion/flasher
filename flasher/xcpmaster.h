@@ -57,7 +57,7 @@
 * Function prototypes
 ****************************************************************************************/
 uint8_t XcpMasterInit(const char *device, uint32_t baudrate);
-void     XcpMasterDeinit(void);
+void    XcpMasterDeinit(void);
 uint8_t XcpMasterConnect(void);
 uint8_t XcpMasterDisconnect(void);
 uint8_t XcpMasterStartProgrammingSession(void);

@@ -2,6 +2,6 @@
 
 int Flasher::load(const string& path)
 {
-	m_hexFile.load(path);
+	return m_hexFile.load(path) ? 0 : -1;
 }
 

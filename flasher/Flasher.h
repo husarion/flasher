@@ -7,13 +7,18 @@
 
 using namespace std;
 
+typedef void (*ProgressCallback)(uint32_t current, uint32_t total);
+
 class Flasher
 {
 public:
+	Flasher() : m_callback(0) { }
+
 	int load(const string& path);
 
 	void setDevice(const string& device) { m_device = device; }
 	void setBaudrate(int baudrate) { m_baudrate = baudrate; }
+	void setCallback(ProgressCallback callback) { m_callback = callback; }
 
 	virtual int init() = 0;
 	virtual int open() = 0;
@@ -26,6 +31,7 @@ protected:
 	THexFile m_hexFile;
 	string m_device;
 	int m_baudrate;
+	ProgressCallback m_callback;
 };
 
 #endif
