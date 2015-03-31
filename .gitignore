@@ -8,3 +8,6 @@ Makefile
 *.elf
 *.map
 bin
+flasher
+main.bin
+flasher_hard

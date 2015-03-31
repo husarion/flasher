@@ -29,8 +29,10 @@ elseif(UNIX)
 
 	include_directories(${CURRENT_DIR}/port/linux/ /usr/include/libusb-1.0/)
 endif()
+include_directories(${CURRENT_DIR}/include)
 
-set(COMMON_SOURCES main.cpp myFTDI.cpp devices.cpp ihex.cpp xcpmaster.cpp HardFlasher.cpp Flasher.cpp SoftFlasher.cpp
+set(COMMON_SOURCES src/main.cpp src/myFTDI.cpp src/devices.cpp src/ihex.cpp src/xcpmaster.cpp
+	src/HardFlasher.cpp src/Flasher.cpp src/SoftFlasher.cpp
 	${PROJECT_PORT_DIR}/xcptransport.cpp ${PROJECT_PORT_DIR}/timeutil.cpp)
 
 if(WIN32)
