@@ -31,73 +31,34 @@
 * \endinternal
 ****************************************************************************************/
 
-
-/****************************************************************************************
-* Include files
-****************************************************************************************/
-#include <assert.h>                                   /* assertion module              */
-#include <sb_types.h>                                 /* C types                       */
-#include <stdio.h>                                    /* standard I/O library          */
-#include <string.h>                                   /* string library                */
-#include "xcpmaster.h"                                /* XCP master protocol module    */
-#include "timeutil.h"                                 /* time utility module           */
+#include <assert.h>
+#include <sb_types.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "xcpmaster.h"
+#include "timeutil.h"
 
 #include "ihex.h"
 
-/****************************************************************************************
-* Function prototypes
-****************************************************************************************/
-static void     DisplayProgramInfo(void);
-static void     DisplayProgramUsage(void);
-static sb_uint8 ParseCommandLine(int argc, const char *argv[]);
+static void DisplayProgramUsage(void);
+static uint8_t ParseCommandLine(int argc, const char *argv[]);
 
-
-/****************************************************************************************
-* Macro definitions
-****************************************************************************************/
-/** \brief Program return code if all went ok. */
 #define PROG_RESULT_OK    (0)
-
-/** \brief Program return code if an error occurred. */
 #define PROG_RESULT_ERROR (1)
 
-
-/****************************************************************************************
-* Local data declarations
-****************************************************************************************/
-/** \brief Name of the serial device, such as COM4 or /dev/ttyUSB0. */
 static char serialDeviceName[32];
-
-/** \brief Serial communication speed in bits per second. */
-static sb_uint32 serialBaudrate;
-
-/** \brief Name of the S-record file. */
+static uint32_t serialBaudrate;
 static char hexFileName[128];
 
-
-/************************************************************************************//**
-** \brief     Program entry point.
-** \param     argc Number of program parameters.
-** \param     argv array to program parameter strings.
-** \return    0 on success, > 0 on error.
-**
-****************************************************************************************/
-sb_int32 main(int argc, const char *argv[])
+int32_t main(int argc, const char *argv[])
 {
 	IHexFile f;
 	
-	/* disable buffering for the standard output to make sure printf does not wait until
-	 * a newline character is detected before outputting text on the console.
-	 */
 	setbuf(stdout, 0);
 	
-	/* inform user about the program */
-	// DisplayProgramInfo();
-	
-	/* start out by making sure program was started with the correct parameters */
 	if (ParseCommandLine(argc, argv) == SB_FALSE)
 	{
-		/* parameters invalid. inform user about how this program works */
 		DisplayProgramUsage();
 		return PROG_RESULT_ERROR;
 	}
@@ -105,48 +66,37 @@ sb_int32 main(int argc, const char *argv[])
 	f.load(hexFileName);
 
 	serialBaudrate = 921600;
-	/* -------------------- start the firmware update procedure ------------------------ */
 	printf("Starting firmware update for \"%s\" using %s @ %u bits/s\n", hexFileName, serialDeviceName, serialBaudrate);
 	
-	/* -------------------- Open the serial port --------------------------------------- */
 	printf("Opening serial port %s...", serialDeviceName);
 	if (XcpMasterInit(serialDeviceName, serialBaudrate) == SB_FALSE)
 	{
 		printf("ERROR\n");
-		// SrecordClose(hSrecord);
 		return PROG_RESULT_ERROR;
 	}
 	printf("OK\n");
 	
-	/* -------------------- Connect to XCP slave --------------------------------------- */
 	printf("Connecting to bootloader...");
 	if (XcpMasterConnect() == SB_FALSE)
 	{
-		/* no response. prompt the user to reset the system */
 		printf("TIMEOUT\nReset your microcontroller...");
 	}
-	/* now keep retrying until we get a response */
 	while (XcpMasterConnect() == SB_FALSE)
 	{
-		/* delay a bit to not pump up the CPU load */
 		TimeUtilDelayMs(20);
 	}
 	printf("OK\n");
 	
-	/* -------------------- Prepare the programming session ---------------------------- */
 	printf("Initializing programming session...");
 	if (XcpMasterStartProgrammingSession() == SB_FALSE)
 	{
 		printf("ERROR\n");
 		XcpMasterDisconnect();
 		XcpMasterDeinit();
-		// SrecordClose(hSrecord);
 		return PROG_RESULT_ERROR;
 	}
 	printf("OK\n");
 	
-	/* -------------------- Erase memory ----------------------------------------------- */
-	// printf("Erasing %u bytes starting at 0x%08x...", fileParseResults.data_bytes_total, fileParseResults.address_low);
 	for (unsigned int i = 0; i < f.parts.size(); i++)
 	{
 		TPart* part = f.parts[i];
@@ -156,15 +106,12 @@ sb_int32 main(int argc, const char *argv[])
 			printf("ERROR\n");
 			XcpMasterDisconnect();
 			XcpMasterDeinit();
-			// SrecordClose(hSrecord);
 			return PROG_RESULT_ERROR;
 		}
 	}
 	printf("OK\n");
 	
-	/* -------------------- Program data ----------------------------------------------- */
 	printf("Programming data. Please wait...");
-	/* loop through all S-records with program data */
 	for (unsigned int i = 0; i < f.parts.size(); i++)
 	{
 		TPart* part = f.parts[i];
@@ -192,7 +139,6 @@ sb_int32 main(int argc, const char *argv[])
 	}
 	printf("OK\n");
 	
-	/* -------------------- Stop the programming session ------------------------------- */
 	printf("Finishing programming session...");
 	if (XcpMasterStopProgrammingSession() == SB_FALSE)
 	{
@@ -203,7 +149,6 @@ sb_int32 main(int argc, const char *argv[])
 	}
 	printf("OK\n");
 	
-	/* -------------------- Disconnect from XCP slave and perform software reset ------- */
 	printf("Performing software reset...");
 	if (XcpMasterDisconnect() == SB_FALSE)
 	{
@@ -213,39 +158,13 @@ sb_int32 main(int argc, const char *argv[])
 	}
 	printf("OK\n");
 	
-	/* -------------------- close the serial port -------------------------------------- */
 	XcpMasterDeinit();
 	printf("Closed serial port %s\n", serialDeviceName);
 	
-	/* -------------------- close the S-record file ------------------------------------ */
-	printf("Closed S-record file \"%s\"\n", hexFileName);
-	
-	/* all done */
 	printf("Firmware successfully updated!\n");
 	return PROG_RESULT_OK;
-} /*** end of main ***/
+}
 
-
-/************************************************************************************//**
-** \brief     Outputs information to the user about this program.
-** \return    none.
-**
-****************************************************************************************/
-static void DisplayProgramInfo(void)
-{
-	printf("-------------------------------------------------------------------------\n");
-	printf("flasher_soft version 1.00. Performs firmware updates via the serial port\n");
-	printf("for a microcontroller based system that runs the OpenBLT bootloader.\n\n");
-	printf("Copyright (c) by Feaser  http://www.feaser.com\n");
-	printf("-------------------------------------------------------------------------\n");
-} /*** end of DisplayProgramInfo ***/
-
-
-/************************************************************************************//**
-** \brief     Outputs information to the user about how to use this program.
-** \return    none.
-**
-****************************************************************************************/
 static void DisplayProgramUsage(void)
 {
 	printf("Usage:    flasher_soft -d[device] [hex file]\n\n");
@@ -271,12 +190,12 @@ static void DisplayProgramUsage(void)
 ** \return    SB_TRUE on success, SB_FALSE otherwise.
 **
 ****************************************************************************************/
-static sb_uint8 ParseCommandLine(int argc, const char *argv[])
+static uint8_t ParseCommandLine(int argc, const char *argv[])
 {
-	sb_uint8 paramIdx;
-	sb_uint8 paramDfound = SB_FALSE;
-	sb_uint8 paramBfound = SB_FALSE;
-	sb_uint8 srecordfound = SB_FALSE;
+	uint8_t paramIdx;
+	uint8_t paramDfound = SB_FALSE;
+	uint8_t paramBfound = SB_FALSE;
+	uint8_t srecordfound = SB_FALSE;
 	
 	/* make sure the right amount of arguments are given */
 	if (argc != 3)

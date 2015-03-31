@@ -231,7 +231,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			printf("bin file path must be provided\n");
+			printf("hex file path must be provided\n");
 			return 1;
 		}
 	}
