@@ -34,7 +34,7 @@ void usage(char** argv)
 
 void callback(uint32_t cur, uint32_t total)
 {
-	int width = 50;
+	int width = 30;
 	int ratio = cur * width / total;
 	int id = cur / 2000;
 	
