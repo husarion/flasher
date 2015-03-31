@@ -14,6 +14,8 @@ using namespace std;
 #define ACK 0x79
 #define NACK 0x1f
 
+#define TIMEOUT (1000)
+
 uint32_t SWAP32(uint32_t v)
 {
 	return ((v & 0x000000ff) << 24) | ((v & 0x0000ff00) << 8) |
@@ -27,41 +29,52 @@ int HardFlasher::init()
 }
 int HardFlasher::open()
 {
-	printf("opening device...\n");
 	m_serial = uart_open(m_baudrate);
 	return 0;
 }
 int HardFlasher::close()
 {
 	if (m_serial)
+	{
 		uart_close(m_serial);
+		m_serial = 0;
+	}
 	return 0;
 }
 int HardFlasher::start()
 {
-retry:
-	close();
-	open();
-
-	printf("sending init...\n");
-	uart_tx(m_serial, "\x7f", 1);
-	
-	int res = uart_read_ack_nack_fast();
-	printf("res 0x%02x\r\n", (unsigned char)res);
-	if (res == ACK || res == NACK)
+	for (;;)
 	{
-		printf("device answered with 0x%02x\n", (unsigned char)res);
+		printf("Connecting to bootloader... ");
+		close();
+		open();
 		
-		if (getVersion())
-			return -1;
-		if (getCommand())
-			return -1;
-		if (getID())
-			return -1;
+		// printf("sending init...\n");
+		uart_tx(m_serial, "\x7f", 1);
+		
+		int res = uart_read_ack_nack_fast();
+		// printf("res 0x%02x\r\n", (unsigned char)res);
+		if (res == ACK || res == NACK)
+		{
+			// printf("connected\n");
+			// printf("device answered with 0x%02x\n", (unsigned char)res);
 			
-		return 0;
+			// if (getVersion())
+			// return -1;
+			if (getCommand())
+				return -1;
+			// if (getID())
+			// return -1;
+			
+			printf("OK\n");
+			break;
+		}
+		else
+		{
+			printf("not found (check if your RoboCORE is powered up)\n");
+		}
 	}
-	goto retry;
+	return 0;
 }
 int HardFlasher::getVersion()
 {
@@ -97,7 +110,7 @@ int HardFlasher::getCommand()
 {
 	int res;
 	
-	printf(">>> get command\n");
+	// printf(">>> get command\n");
 	
 	uart_send_cmd(0x00);
 	
@@ -118,18 +131,18 @@ int HardFlasher::getCommand()
 	
 	for (int i = 0; i < 11; i++)
 		m_dev.cmds[i] = d[i + 1];
-	printf("Bootloader version: 0x%02x = v%d.%d\n", m_dev.bootVersion, m_dev.bootVersion >> 4, m_dev.bootVersion & 0x0f);
-	printf("Get command    is 0x%02x\n", m_dev.cmds[GET]);
-	printf("Get version    is 0x%02x\n", m_dev.cmds[GET_VERSION]);
-	printf("Get ID         is 0x%02x\n", m_dev.cmds[GET_ID]);
-	printf("Read memory    is 0x%02x\n", m_dev.cmds[READ_MEMORY]);
-	printf("Go             is 0x%02x\n", m_dev.cmds[GO]);
-	printf("Write memory   is 0x%02x\n", m_dev.cmds[WRITE_MEMORY]);
-	printf("Erase command  is 0x%02x\n", m_dev.cmds[ERASE]);
-	printf("Write Protect  is 0x%02x\n", m_dev.cmds[WRITE_PROTECT]);
-	printf("Write Unpotect is 0x%02x\n", m_dev.cmds[WRITE_UNPROTECT]);
-	printf("Read Protect   is 0x%02x\n", m_dev.cmds[READOUT_PROTECT]);
-	printf("Read Unprotect is 0x%02x\n", m_dev.cmds[READOUT_UNPROTECT]);
+	// printf("Bootloader version: 0x%02x = v%d.%d\n", m_dev.bootVersion, m_dev.bootVersion >> 4, m_dev.bootVersion & 0x0f);
+	// printf("Get command    is 0x%02x\n", m_dev.cmds[GET]);
+	// printf("Get version    is 0x%02x\n", m_dev.cmds[GET_VERSION]);
+	// printf("Get ID         is 0x%02x\n", m_dev.cmds[GET_ID]);
+	// printf("Read memory    is 0x%02x\n", m_dev.cmds[READ_MEMORY]);
+	// printf("Go             is 0x%02x\n", m_dev.cmds[GO]);
+	// printf("Write memory   is 0x%02x\n", m_dev.cmds[WRITE_MEMORY]);
+	// printf("Erase command  is 0x%02x\n", m_dev.cmds[ERASE]);
+	// printf("Write Protect  is 0x%02x\n", m_dev.cmds[WRITE_PROTECT]);
+	// printf("Write Unpotect is 0x%02x\n", m_dev.cmds[WRITE_UNPROTECT]);
+	// printf("Read Protect   is 0x%02x\n", m_dev.cmds[READOUT_PROTECT]);
+	// printf("Read Unprotect is 0x%02x\n", m_dev.cmds[READOUT_UNPROTECT]);
 	
 	res = uart_read_ack_nack();
 	if (res != ACK)
@@ -181,17 +194,18 @@ int HardFlasher::erase()
 	
 	if (m_dev.cmds[ERASE] == 0x44)
 	{
-		printf("Erasing device with Extended Erase command\n");
+		// printf("Erasing device with Extended Erase command\n");
 		
 		uart_send_cmd(0x44);
 		res = uart_read_ack_nack();
 		if (res != ACK)
 		{
-			printf("Erase NACK'ed\n");
+			printf("ERROR\n");
+			// printf("Erase NACK'ed\n");
 			return -1;
 		}
 		
-		printf("Erase ACK'ed\n");
+		// printf("Erase ACK'ed\n");
 		
 		map<int, int> pages;
 		
@@ -212,7 +226,7 @@ int HardFlasher::erase()
 		}
 		
 		int pagesToEraseCnt = pages.size();
-		printf("pages to erase %d\r\n", pagesToEraseCnt);
+		// printf("Pages to erase: ", pagesToEraseCnt);
 		
 		uint8_t data[2 + pagesToEraseCnt * 2];
 		data[0] = (pagesToEraseCnt - 1) >> 8;
@@ -221,51 +235,53 @@ int HardFlasher::erase()
 		for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
 		{
 			int pageNr = it->first;
-			printf("page %d\r\n", pageNr);
+			// printf("%d ", pageNr);
 			data[2 + idx * 2] = pageNr >> 8;
 			data[2 + idx * 2 + 1] = pageNr & 0xff;
 			idx++;
 		}
+		// printf("\n");
 		
 		uart_write_data_checksum(data, sizeof(data));
 		
 		res = uart_read_ack_nack(40000);
 		if (res == ACK)
 		{
-			printf("Mass Erase ACK'ed\n");
+			printf("OK\n");
+			// printf("Mass Erase ACK'ed\n");
 			return 0;
 		}
 		else if (res == NACK)
 		{
-			printf("Mass Erase NACK'ed\n");
+			printf("ERROR\n");
+			// printf("Mass Erase NACK'ed\n");
 			return -1;
 		}
 		else
 		{
-			printf("Timeout\n");
+			printf("ERROR\n");
+			// printf("Timeout\n");
 			return -1;
 		}
 	}
 	else if (m_dev.cmds[ERASE] == 0x43)
 	{
+		printf("ERROR\n");
 		return -1; // not supported
 	}
 	else
 	{
-		printf("unknown Erase command\n");
-		return -1;
+		printf("ERROR (unknown command)\n");
+		return -2;
 	}
 }
 int HardFlasher::flash()
 {
 	char buf[256 + 1];
 	
-	uint32_t curAddr = 0x08008000;
 	uint32_t sent = 0;
 	
-	uint32_t startTime = TimeUtilGetSystemTimeMs();
-	
-	for (int i = 0; i < m_hexFile.parts.size(); i++)
+	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
 		
@@ -277,63 +293,67 @@ int HardFlasher::flash()
 			int len = part->getEndAddr() - curAddr + 1;
 			if (len > 256) len = 256;
 			
-			printf("writing 0x%08x len: %d...\n", curAddr, len);
+			// printf("writing 0x%08x len: %d...\n", curAddr, len);
 			
 			uart_send_cmd(0x31);
 			
 			int res = uart_read_ack_nack();
-			if (res == ACK)
+			if (res != ACK)
 			{
-				uint32_t tmp = SWAP32(curAddr);
-				uart_write_data_checksum((char*)&tmp, 4);
-				
-				res = uart_read_ack_nack();
-				if (res == ACK)
-				{
-					printf("to send: %d\n", len);
-					
-					buf[0] = len - 1;
-					memcpy(buf + 1, data, len);
-					
-					uart_write_data_checksum(buf, len + 1);
-					res = uart_read_ack_nack();
-					
-					if (res == ACK)
-					{
-						sent += len;
-						curAddr += len;
-						data += len;
-						printf("ok 0x%08x %d of %d\n", curAddr, sent, m_hexFile.totalLength);
-					}
-					else
-					{
-						printf("failed\n");
-						return -1;
-					}
-				}
-			}
-			else
-			{
+				if (m_callback)
+					m_callback(-1, -1);
+				printf("ERROR\n");
 				return -1;
 			}
+			uint32_t tmp = SWAP32(curAddr);
+			uart_write_data_checksum((char*)&tmp, 4);
+			
+			res = uart_read_ack_nack();
+			if (res != ACK)
+			{
+				if (m_callback)
+					m_callback(-1, -1);
+				printf("ERROR\n");
+				return -1;
+			}
+			buf[0] = len - 1;
+			memcpy(buf + 1, data, len);
+			
+			uart_write_data_checksum(buf, len + 1);
+			res = uart_read_ack_nack();
+			
+			if (res != ACK)
+			{
+				if (m_callback)
+					m_callback(-1, -1);
+				printf("ERROR\n");
+				return -1;
+			}
+			
+			sent += len;
+			curAddr += len;
+			data += len;
+			
+			if (m_callback)
+				m_callback(sent, m_hexFile.totalLength);
 		}
 	}
-	
-	uint32_t endTime = TimeUtilGetSystemTimeMs();
-	float time = endTime - startTime;
-	float avg = m_hexFile.totalLength / (time / 1000.0f) / 1024.0f;
-	
-	printf("time: %d ms avg speed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
+	if (m_callback)
+		m_callback(-1, -1);
+	printf("OK\n");
 	
 	return 0;
 }
-
-#define TIMEOUT (1000)
-
+int HardFlasher::reset()
+{
+	close();
+	printf("OK\n");
+	return 0;
+}
 
 int HardFlasher::uart_send_cmd(uint8_t cmd)
 {
-	char buf[] = { cmd, ~cmd };
+	uint8_t buf[] = { cmd, (uint8_t)~cmd };
 	return uart_tx(m_serial, buf, 2);
 }
 

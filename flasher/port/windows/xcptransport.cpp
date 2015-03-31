@@ -66,7 +66,7 @@ static HANDLE hUart = INVALID_HANDLE_VALUE;
 ** \brief     Initializes the communication interface used by this transport layer.
 ** \param     device Serial communication device name. For example "COM4".
 ** \param     baudrate Communication speed in bits/sec.
-** \return    SB_TRUE if successful, SB_FALSE otherwise.
+** \return    true if successful, false otherwise.
 **
 ****************************************************************************************/
 uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
@@ -85,7 +85,7 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
   /* validate COM port handle */
   if (hUart == INVALID_HANDLE_VALUE)
   {
-    return SB_FALSE;
+    return false;
   }
 
   /* get current COM port configuration */
@@ -93,7 +93,7 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
   if (!GetCommState(hUart, &dcbSerialParams))
   {
     XcpTransportClose();
-    return SB_FALSE;
+    return false;
   }
 
   /* configure the baudrate and 8,n,1 */
@@ -104,7 +104,7 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
   if (!SetCommState(hUart, &dcbSerialParams))
   {
     XcpTransportClose();
-    return SB_FALSE;
+    return false;
   }
 
   /* set communication timeout parameters */
@@ -116,24 +116,24 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
   if (!SetCommTimeouts(hUart, &timeouts))
   {
     XcpTransportClose();
-    return SB_FALSE;
+    return false;
   }
 
   /* set transmit and receive buffer sizes */
   if(!SetupComm(hUart, UART_RX_BUFFER_SIZE, UART_TX_BUFFER_SIZE))
   {
     XcpTransportClose();
-    return SB_FALSE;
+    return false;
   }
 
   /* empty the transmit and receive buffers */
   if (!FlushFileBuffers(hUart))
   {
     XcpTransportClose();
-    return SB_FALSE;
+    return false;
   }
   /* successfully connected to the serial device */
-  return SB_TRUE;
+  return true;
 } /*** end of XcpTransportInit ***/
 
 
@@ -142,8 +142,8 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
 **            response within the given timeout. The data in the response packet is 
 **            stored in an internal data buffer that can be obtained through function
 **            XcpTransportReadResponsePacket().
-** \return    SB_TRUE is the response packet was successfully received and stored, 
-**            SB_FALSE otherwise.
+** \return    true is the response packet was successfully received and stored, 
+**            false otherwise.
 **
 ****************************************************************************************/
 uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
@@ -171,12 +171,12 @@ uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
   /* first submit the XCP packet for transmission */
   if (!WriteFile(hUart, xcpUartBuffer, xcpUartLen, &dwWritten, 0)) 
   {
-    return SB_FALSE;
+    return false;
   }
   /* double check that all bytes were actually transmitted */
   if (dwWritten != xcpUartLen)
   {
-    return SB_FALSE;
+    return false;
   }
 
   /* ------------------------ XCP packet reception ----------------------------------- */
@@ -199,7 +199,7 @@ uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
     if ( (dwToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime) )
     {
       /* timeout occurred */
-      return SB_FALSE;
+      return false;
     }
   }
 
@@ -219,11 +219,11 @@ uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
     if ( (dwToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime) )
     {
       /* timeout occurred */
-      return SB_FALSE;
+      return false;
     }
   }
   /* still here so the complete packet was received */
-  return SB_TRUE;
+  return true;
 } /*** end of XcpMasterTpSendPacket ***/
 
 

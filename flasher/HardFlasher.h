@@ -13,6 +13,7 @@ public:
 	int start();
 	int erase();
 	int flash();
+	int reset();
 	
 private:
 	stm32_dev_t m_dev;

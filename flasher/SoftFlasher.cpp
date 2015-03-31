@@ -30,17 +30,18 @@ int SoftFlasher::start()
 {
 	for (;;)
 	{
+		printf("Connecting to bootloader... ");
 		int res = open();
 		if (res != 0)
 			return -1;
 			
 		if (!XcpMasterConnect())
 		{
-			printf("Unable to connect to bootloader, reset your RoboCORE...\n");
+			printf("unable, please reset your RoboCORE...\n");
 		}
 		else
 		{
-			printf("Connected\r\n");
+			printf("connected\n");
 			
 			printf("Initializing programming session... ");
 			if (!XcpMasterStartProgrammingSession())
@@ -61,7 +62,7 @@ int SoftFlasher::erase()
 	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
-		printf("erasing 0x%08x len: %d\r\n", part->getStartAddr(), part->getLen());
+		// printf("erasing 0x%08x len: %d\r\n", part->getStartAddr(), part->getLen());
 		if (!XcpMasterClearMemory(part->getStartAddr(), part->getLen()))
 		{
 			printf("ERROR\n");
@@ -77,7 +78,6 @@ int SoftFlasher::flash()
 {
 	uint32_t processedBytes = 0;
 	
-	printf("Programming data. Please wait...");
 	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
@@ -89,9 +89,10 @@ int SoftFlasher::flash()
 			int len = part->getEndAddr() - curAddr + 1;
 			if (len > 255) len = 255;
 			
-			printf("writing 0x%08x len: %d\r\n", curAddr, len);
 			if (!XcpMasterProgramData(curAddr, len, data))
 			{
+				if (m_callback)
+					m_callback(-1, -1);
 				printf("ERROR\n");
 				XcpMasterDisconnect();
 				XcpMasterDeinit();
@@ -105,11 +106,16 @@ int SoftFlasher::flash()
 			if (m_callback)
 				m_callback(processedBytes, m_hexFile.totalLength);
 		}
-		
 	}
+	if (m_callback)
+		m_callback(-1, -1);
 	printf("OK\n");
 	
-	printf("Finishing programming session... ");
+	return 0;
+}
+int SoftFlasher::reset()
+{
+	// printf("Finishing programming session... ");
 	if (!XcpMasterStopProgrammingSession())
 	{
 		printf("ERROR\n");
@@ -117,9 +123,9 @@ int SoftFlasher::flash()
 		XcpMasterDeinit();
 		return -1;
 	}
-	printf("OK\n");
+	// printf("OK\n");
 	
-	printf("Performing software reset... ");
+	// printf("Performing software reset... ");
 	if (!XcpMasterDisconnect())
 	{
 		printf("ERROR\n");
@@ -127,6 +133,5 @@ int SoftFlasher::flash()
 		return -1;
 	}
 	printf("OK\n");
-	
 	return 0;
 }

@@ -8,12 +8,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-// #include "proto.h"
-// #include "uart.h"
-// #include "devices.h"
-// #include "cmds.h"
-// #include "ihex.h"
-
+#include "timeutil.h"
 #include "Flasher.h"
 #include "HardFlasher.h"
 #include "SoftFlasher.h"
@@ -39,13 +34,44 @@ void usage(char** argv)
 
 void callback(uint32_t cur, uint32_t total)
 {
-	printf("%d %d\r\n", cur, total);
+	int width = 50;
+	int ratio = cur * width / total;
+	int id = cur / 2000;
+	
+	if (cur == -1)
+	{
+		printf("\rProgramming device... ");
+		int toClear = width + 25;
+		for (int i = 0; i < toClear; i++)
+			putchar(' ');
+		printf("\rProgramming device... ");
+		return;
+	}
+	
+	static int lastID = -1;
+	if (id == lastID)
+		return;
+	lastID = id;
+	
+	printf("\rProgramming device... [");
+	for (int i = 0; i < width; i++)
+	{
+		if (i <= ratio)
+			putchar('=');
+		else
+			putchar(' ');
+	}
+	printf("] %4d kB / %4d kB %3d%%", cur / 1024, total / 1024, cur * 100 / total);
+	fflush(stdout);
 }
 
 int main(int argc, char** argv)
 {
 	int speed = 460800;
 	const char* device = 0;
+	int res;
+
+	setvbuf(stdout, NULL, _IONBF, 0);
 	
 	static struct option long_options[] =
 	{
@@ -102,48 +128,71 @@ int main(int argc, char** argv)
 		flasher->setDevice(device);
 	}
 	flasher->setCallback(&callback);
-	int res;
 	res = flasher->load(filePath);
-	if(res != 0)
+	if (res != 0)
 	{
-		fprintf(stderr, "unable to load hex file\n");
+		printf("unable to load hex file\n");
 		return 1;
 	}
 	
 	res = flasher->init();
-	if(res != 0)
+	if (res != 0)
 	{
-		fprintf(stderr, "unable to initialize flasher\n");
+		printf("unable to initialize flasher\n");
 		return 1;
 	}
-
+	
 try_flash:
 	res = flasher->start();
 	if (res == 0)
 	{
+		uint32_t startTime = TimeUtilGetSystemTimeMs();
+		
+		printf("Erasing device... ");
 		res = flasher->erase();
 		if (res == 0)
 		{
-			printf("Erasing done\n");
+			// printf("Erasing done\n");
 		}
 		else
 		{
+			printf("\n");
 			goto try_flash;
 		}
-
+		
+		printf("Programming device... ");
 		res = flasher->flash();
 		if (res == 0)
 		{
-			printf("Programming done\n");
+			// printf("Programming done\n");
 		}
 		else
 		{
+			printf("\n");
 			goto try_flash;
 		}
+		
+		printf("Reseting device... ");
+		res = flasher->reset();
+		if (res == 0)
+		{
+			// printf("Reseting done\n");
+		}
+		else
+		{
+			printf("\n");
+			goto try_flash;
+		}
+		
+		uint32_t endTime = TimeUtilGetSystemTimeMs();
+		float time = endTime - startTime;
+		float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
+		
+		printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 	}
 	else
 	{
-		fprintf(stderr, "unable to start flashing\n");
+		printf("unable to start flashing\n");
 		return 1;
 	}
 	

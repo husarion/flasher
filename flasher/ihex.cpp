@@ -75,13 +75,13 @@ int THexFile::load(const std::string& path)
 			break;
 		case 2:
 			extAddr2 = strhex2int(line.substr(9, 4)) * 16;
-			printf("extAddr2 = 0x%08x\r\n", extAddr2);
+			// printf("extAddr2 = 0x%08x\r\n", extAddr2);
 			break;
 		case 3:
 			break;
 		case 4:
 			extAddr4 = strhex2int(line.substr(9, 4)) << 16;
-			printf("extAddr4 = 0x%08x\r\n", extAddr4);
+			// printf("extAddr4 = 0x%08x\r\n", extAddr4);
 			break;
 		case 5:
 			break;
@@ -102,7 +102,7 @@ TPart* THexFile::findPart(uint32_t addr)
 	TPart *p = new TPart();
 	p->startAddr = addr;
 	parts.push_back(p);
-	printf("adding part 0x%08x\r\n", addr);
+	// printf("adding part 0x%08x\r\n", addr);
 	return p;
 }
 

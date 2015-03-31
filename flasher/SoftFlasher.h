@@ -10,6 +10,7 @@ public:
 	int start();
 	int erase();
 	int flash();
+	int reset();
 	
 private:
 	int open();
