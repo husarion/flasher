@@ -43,13 +43,12 @@ int HardFlasher::close()
 }
 int HardFlasher::start()
 {
+	printf("Connecting to bootloader.");
 	for (;;)
 	{
-		printf("Connecting to bootloader... ");
 		close();
 		open();
 		
-		// printf("sending init...\n");
 		uart_tx(m_serial, "\x7f", 1);
 		
 		int res = uart_read_ack_nack_fast();
@@ -66,12 +65,12 @@ int HardFlasher::start()
 			// if (getID())
 			// return -1;
 			
-			printf("OK\n");
+			printf(" OK\n");
 			break;
 		}
 		else
 		{
-			printf("not found (check if your RoboCORE is powered up)\n");
+			printf(".");
 		}
 	}
 	return 0;
