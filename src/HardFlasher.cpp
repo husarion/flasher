@@ -29,13 +29,67 @@ int HardFlasher::init()
 }
 int HardFlasher::open()
 {
-	m_serial = uart_open(m_baudrate);
-	return 0;
+	m_serial = uart_open(m_baudrate, false);
+	if (m_serial)
+	{
+		printf(" connected\r\n");
+		printf("Checking settings... ");
+		int r = uart_check_gpio(m_serial);
+		if (r)
+		{
+			uart_close(m_serial);
+			m_serial = 0;
+			printf(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
+			printf("Unplug RoboCORE.");
+			bool restarted = false;
+			for (;;)
+			{
+				if (!restarted)
+				{
+					m_serial = uart_open(m_baudrate, false);
+					if (m_serial == 0)
+					{
+						restarted = true;
+						printf(" OK, plug it again.");
+					}
+					else
+					{
+						uart_close(m_serial);
+						m_serial = 0;
+					}
+				}
+				else
+				{
+					m_serial = uart_open(m_baudrate, false);
+					if (m_serial)
+						break;
+				}
+				TimeUtilDelayMs(10);
+				static int cnt = 0;
+				if (cnt++ == 15)
+				{
+					printf(".");
+					cnt = 0;
+				}
+			}
+			printf(" connected\r\n");
+		}
+		else
+		{
+			printf(" OK\r\n");
+		}
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
 }
 int HardFlasher::close()
 {
 	if (m_serial)
 	{
+		uart_reset_normal(m_serial);
 		uart_close(m_serial);
 		m_serial = 0;
 	}
@@ -43,13 +97,44 @@ int HardFlasher::close()
 }
 int HardFlasher::start()
 {
-	printf("Connecting to bootloader.");
+	int lastMsg = -1;
+	printf("Connecting to RoboCORE...");
+	
 	for (;;)
 	{
-		close();
-		open();
+		if (open())
+		{
+			if (lastMsg == -1)
+			{
+				lastMsg = 0;
+				printf(" plug in RoboCORE..");
+			}
+			else
+			{
+				printf(".");
+			}
+			TimeUtilDelayMs(200);
+		}
+		else
+		{
+			break;
+		}
+	}
+	
+	printf("Connecting to bootloader..");
+	for (;;)
+	{
+		if (uart_reset(m_serial))
+		{
+			printf(" failed\r\n");
+			return -1;
+		}
 		
-		uart_tx(m_serial, "\x7f", 1);
+		if (uart_tx(m_serial, "\x7f", 1) == -1)
+		{
+			printf(" failed\r\n");
+			return -1;
+		}
 		
 		int res = uart_read_ack_nack_fast();
 		// printf("res 0x%02x\r\n", (unsigned char)res);

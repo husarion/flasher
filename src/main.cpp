@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 	int speed = 460800;
 	const char* device = 0;
 	int res;
-
+	
 	setvbuf(stdout, NULL, _IONBF, 0);
 	
 	static struct option long_options[] =
@@ -142,58 +142,61 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	
-try_flash:
-	res = flasher->start();
-	if (res == 0)
+	while (true)
 	{
-		uint32_t startTime = TimeUtilGetSystemTimeMs();
-		
-		printf("Erasing device... ");
-		res = flasher->erase();
+		res = flasher->start();
 		if (res == 0)
 		{
-			// printf("Erasing done\n");
+			uint32_t startTime = TimeUtilGetSystemTimeMs();
+			
+			printf("Erasing device... ");
+			res = flasher->erase();
+			if (res == 0)
+			{
+				// printf("Erasing done\n");
+			}
+			else
+			{
+				printf("\n");
+				continue;
+			}
+			
+			printf("Programming device... ");
+			res = flasher->flash();
+			if (res == 0)
+			{
+				// printf("Programming done\n");
+			}
+			else
+			{
+				printf("\n");
+				continue;
+			}
+			
+			printf("Reseting device... ");
+			res = flasher->reset();
+			if (res == 0)
+			{
+				// printf("Reseting done\n");
+			}
+			else
+			{
+				printf("\n");
+				continue;
+			}
+			
+			uint32_t endTime = TimeUtilGetSystemTimeMs();
+			float time = endTime - startTime;
+			float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
+			
+			printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
+			break;
 		}
-		else
-		{
-			printf("\n");
-			goto try_flash;
-		}
-		
-		printf("Programming device... ");
-		res = flasher->flash();
-		if (res == 0)
-		{
-			// printf("Programming done\n");
-		}
-		else
-		{
-			printf("\n");
-			goto try_flash;
-		}
-		
-		printf("Reseting device... ");
-		res = flasher->reset();
-		if (res == 0)
-		{
-			// printf("Reseting done\n");
-		}
-		else
-		{
-			printf("\n");
-			goto try_flash;
-		}
-		
-		uint32_t endTime = TimeUtilGetSystemTimeMs();
-		float time = endTime - startTime;
-		float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
-		
-		printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
-	}
-	else
-	{
-		printf("unable to start flashing\n");
-		return 1;
+		// else
+		// {
+		// printf("unable to start flashing\n");
+		// return 1;
+		// }
 	}
 	
 	flasher->close();
