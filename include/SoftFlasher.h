@@ -11,6 +11,9 @@ public:
 	int erase();
 	int flash();
 	int reset();
+
+	int protect() { return -1; }
+	int unprotect() { return -1; }
 	
 private:
 	int open();

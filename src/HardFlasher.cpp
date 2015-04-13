@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <vector>
 #include <map>
@@ -95,6 +96,7 @@ int HardFlasher::close()
 	}
 	return 0;
 }
+
 int HardFlasher::start()
 {
 	int lastMsg = -1;
@@ -143,6 +145,25 @@ int HardFlasher::start()
 			// printf("connected\n");
 			// printf("device answered with 0x%02x\n", (unsigned char)res);
 			
+			
+// writeUnprotect();
+			// writeProtect();
+			
+			
+			
+			uint32_t a;
+			for (int i = 0; i < 16; i += 8)
+			{
+				readMemory(0x1fffc000 + i, &a, 4);
+				// readMemory(0x08000000+i, &a, 4);
+				
+				printf("%d 0x%08x\r\n", i, a);
+			}
+			
+			// 0x1fffc000
+			// 0x1fff000f 0x10 16
+			
+			
 			// if (getVersion())
 			// return -1;
 			printf(" ");
@@ -159,118 +180,6 @@ int HardFlasher::start()
 			printf(".");
 		}
 	}
-	return 0;
-}
-int HardFlasher::getVersion()
-{
-	int res;
-	
-	printf(">>> get version\n");
-	
-	uart_send_cmd(0x01);
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get version: NACK(1)\n");
-		return -1;
-	}
-	
-	m_dev.version = uart_read_byte();
-	m_dev.option1 = uart_read_byte();
-	m_dev.option2 = uart_read_byte();
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get version: NACK(2)\n");
-		return -1;
-	}
-	
-	printf("Device version: 0x%02x Option1: 0x%02x Option2: 0x%02x\n", m_dev.version, m_dev.option1, m_dev.option2);
-	
-	return 0;
-}
-int HardFlasher::getCommand()
-{
-	int res;
-	
-	// printf(">>> get command\n");
-	
-	uart_send_cmd(0x00);
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get command: NACK(1)\n");
-		return -1;
-	}
-	
-	int len = uart_read_byte() + 1;
-	// printf ("getcmd len: %d\n", len);
-	
-	char d[50];
-	memset(d, 0, 50);
-	uart_read_data(d, len);
-	m_dev.bootVersion = d[0];
-	
-	for (int i = 0; i < 11; i++)
-		m_dev.cmds[i] = d[i + 1];
-	// printf("Bootloader version: 0x%02x = v%d.%d\n", m_dev.bootVersion, m_dev.bootVersion >> 4, m_dev.bootVersion & 0x0f);
-	// printf("Get command    is 0x%02x\n", m_dev.cmds[GET]);
-	// printf("Get version    is 0x%02x\n", m_dev.cmds[GET_VERSION]);
-	// printf("Get ID         is 0x%02x\n", m_dev.cmds[GET_ID]);
-	// printf("Read memory    is 0x%02x\n", m_dev.cmds[READ_MEMORY]);
-	// printf("Go             is 0x%02x\n", m_dev.cmds[GO]);
-	// printf("Write memory   is 0x%02x\n", m_dev.cmds[WRITE_MEMORY]);
-	// printf("Erase command  is 0x%02x\n", m_dev.cmds[ERASE]);
-	// printf("Write Protect  is 0x%02x\n", m_dev.cmds[WRITE_PROTECT]);
-	// printf("Write Unpotect is 0x%02x\n", m_dev.cmds[WRITE_UNPROTECT]);
-	// printf("Read Protect   is 0x%02x\n", m_dev.cmds[READOUT_PROTECT]);
-	// printf("Read Unprotect is 0x%02x\n", m_dev.cmds[READOUT_UNPROTECT]);
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get cmd: NACK(2)\n");
-		return -1;
-	}
-	
-	return 0;
-}
-int HardFlasher::getID()
-{
-	int res;
-	
-	printf(">>> get id\n");
-	
-	uart_send_cmd(m_dev.cmds[GET_ID]);
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get id: NACK(1)\n");
-		return -1;
-	}
-	
-	int len = uart_read_byte() + 1;
-	printf("get id: length: %d\n", len);
-	
-	char d[50];
-	memset(d, 0, 50);
-	uart_read_data(d, len);
-	
-	m_dev.id = (d[0] << 8) | d[1];
-	
-	printf("Device ID: 0x%04x\n", m_dev.id);
-	
-	res = uart_read_ack_nack();
-	if (res != ACK)
-	{
-		printf("get id: NACK(2)\n");
-		return -1;
-	}
-	
 	return 0;
 }
 int HardFlasher::erase()
@@ -435,7 +344,222 @@ int HardFlasher::reset()
 	printf("OK\n");
 	return 0;
 }
+int HardFlasher::protect()
+{
+	int res;
+	
+	vector<int> pagesToProtect;
+	pagesToProtect.push_back(0);
+	pagesToProtect.push_back(1);
 
+	uart_send_cmd(0x63);
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("ERROR\n");
+		return -1;
+	}
+	uint8_t data[1 + pagesToProtect.size()];
+	data[0] = (pagesToProtect.size() - 1) & 0xff;
+	int idx = 0;
+	for (int i = 0; i < pagesToProtect.size(); i++)
+		data[1 + i] = pagesToProtect[i];
+	// printf("\n");
+	
+	uart_write_data_checksum(data, sizeof(data));
+	
+	res = uart_read_ack_nack(40000);
+	if (res != ACK)
+	{
+		printf("ERROR\n");
+		return -1;
+	}
+	printf("OK\n");
+	return 0;
+}
+int HardFlasher::unprotect()
+{
+	int res;
+	
+	uart_send_cmd(0x73);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("Write Unprotect command first NACK'ed\n");
+		return -1;
+	}
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("Write Unprotect command second NACK'ed\n");
+		return -1;
+	}
+	
+	printf("Write Unprotect succeed\n");
+	
+	// usleep(1000 * 1000);
+	
+	return 0;
+}
+
+// commands
+int HardFlasher::getVersion()
+{
+	int res;
+	
+	printf(">>> get version\n");
+	
+	uart_send_cmd(0x01);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get version: NACK(1)\n");
+		return -1;
+	}
+	
+	m_dev.version = uart_read_byte();
+	m_dev.option1 = uart_read_byte();
+	m_dev.option2 = uart_read_byte();
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get version: NACK(2)\n");
+		return -1;
+	}
+	
+	printf("Device version: 0x%02x Option1: 0x%02x Option2: 0x%02x\n", m_dev.version, m_dev.option1, m_dev.option2);
+	
+	return 0;
+}
+int HardFlasher::getCommand()
+{
+	int res;
+	
+	// printf(">>> get command\n");
+	
+	uart_send_cmd(0x00);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get command: NACK(1)\n");
+		return -1;
+	}
+	
+	int len = uart_read_byte() + 1;
+	// printf ("getcmd len: %d\n", len);
+	
+	char d[50];
+	memset(d, 0, 50);
+	uart_read_data(d, len);
+	m_dev.bootVersion = d[0];
+	
+	for (int i = 0; i < 11; i++)
+		m_dev.cmds[i] = d[i + 1];
+	// printf("Bootloader version: 0x%02x = v%d.%d\n", m_dev.bootVersion, m_dev.bootVersion >> 4, m_dev.bootVersion & 0x0f);
+	// printf("Get command    is 0x%02x\n", m_dev.cmds[GET]);
+	// printf("Get version    is 0x%02x\n", m_dev.cmds[GET_VERSION]);
+	// printf("Get ID         is 0x%02x\n", m_dev.cmds[GET_ID]);
+	// printf("Read memory    is 0x%02x\n", m_dev.cmds[READ_MEMORY]);
+	// printf("Go             is 0x%02x\n", m_dev.cmds[GO]);
+	// printf("Write memory   is 0x%02x\n", m_dev.cmds[WRITE_MEMORY]);
+	// printf("Erase command  is 0x%02x\n", m_dev.cmds[ERASE]);
+	// printf("Write Protect  is 0x%02x\n", m_dev.cmds[WRITE_PROTECT]);
+	// printf("Write Unpotect is 0x%02x\n", m_dev.cmds[WRITE_UNPROTECT]);
+	// printf("Read Protect   is 0x%02x\n", m_dev.cmds[READOUT_PROTECT]);
+	// printf("Read Unprotect is 0x%02x\n", m_dev.cmds[READOUT_UNPROTECT]);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get cmd: NACK(2)\n");
+		return -1;
+	}
+	
+	return 0;
+}
+int HardFlasher::getID()
+{
+	int res;
+	
+	printf(">>> get id\n");
+	
+	uart_send_cmd(m_dev.cmds[GET_ID]);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get id: NACK(1)\n");
+		return -1;
+	}
+	
+	int len = uart_read_byte() + 1;
+	printf("get id: length: %d\n", len);
+	
+	char d[50];
+	memset(d, 0, 50);
+	uart_read_data(d, len);
+	
+	m_dev.id = (d[0] << 8) | d[1];
+	
+	printf("Device ID: 0x%04x\n", m_dev.id);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("get id: NACK(2)\n");
+		return -1;
+	}
+	
+	return 0;
+}
+int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
+{
+	uart_send_cmd(0x11);
+	
+	int res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("ERROR1\n");
+		return -1;
+	}
+	uint32_t tmp = SWAP32(addr);
+	uart_write_data_checksum((char*)&tmp, 4);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("ERROR2\n");
+		return -1;
+	}
+	char outbuf[2];
+	outbuf[0] = len - 1;
+	outbuf[1] = 0xff - outbuf[0];
+	
+	uart_write_data(outbuf, 2);
+	res = uart_read_ack_nack(1000);
+	
+	if (res != ACK)
+	{
+		printf("ERROR3\n");
+		return -1;
+	}
+	
+	uart_read_data(buf, len);
+	
+	return 0;
+}
+
+// misc
+void HardFlasher::dumpOptionBytes()
+{
+}
+
+// low-level protocol
 int HardFlasher::uart_send_cmd(uint8_t cmd)
 {
 	uint8_t buf[] = { cmd, (uint8_t)~cmd };

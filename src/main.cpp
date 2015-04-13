@@ -16,7 +16,7 @@
 #include <vector>
 using namespace std;
 
-int doSoft = 0, doHard = 1;
+int doSoft = 0, doHard = 1, doUnprotect = 0, doProtect = 0, doFlash = 0;
 
 uint32_t getTicks()
 {
@@ -78,6 +78,11 @@ int main(int argc, char** argv)
 		{ "soft",  no_argument,       &doSoft, 1 },
 		{ "hard",  no_argument,       &doHard, 1 },
 		
+		{ "test",  no_argument,  &doUnprotect, 1 },
+		{ "flash",  no_argument,  &doFlash, 1 },
+		{ "unprotect",  no_argument,  &doUnprotect, 1 },
+		{ "protect",  no_argument,    &doProtect, 1 },
+		
 		{ "device", required_argument, 0, 'd' },
 		{ "speed",  required_argument, 0, 's' },
 		
@@ -105,11 +110,18 @@ int main(int argc, char** argv)
 		}
 	}
 	
+	doFlash = !doProtect && !doUnprotect;
+	if (doFlash + doProtect + doUnprotect > 1)
+	{
+		usage(argv);
+		return 1;
+	}
+	
 	const char* filePath = 0;
 	if (optind < argc)
 		filePath = argv[optind];
 		
-	if (!filePath || (doSoft && !device))
+	if (doFlash && (!filePath || (doSoft && !device)))
 	{
 		usage(argv);
 		return 1;
@@ -128,11 +140,14 @@ int main(int argc, char** argv)
 		flasher->setDevice(device);
 	}
 	flasher->setCallback(&callback);
-	res = flasher->load(filePath);
-	if (res != 0)
+	if (doFlash)
 	{
-		printf("unable to load hex file\n");
-		return 1;
+		res = flasher->load(filePath);
+		if (res != 0)
+		{
+			printf("unable to load hex file\n");
+			return 1;
+		}
 	}
 	
 	res = flasher->init();
@@ -149,47 +164,60 @@ int main(int argc, char** argv)
 		{
 			uint32_t startTime = TimeUtilGetSystemTimeMs();
 			
-			printf("Erasing device... ");
-			res = flasher->erase();
-			if (res == 0)
+			if (doProtect)
 			{
-				// printf("Erasing done\n");
+				printf("Protecting device... ");
+				res = flasher->protect();
 			}
-			else
+			else if (doUnprotect)
 			{
-				printf("\n");
-				continue;
+				printf("Unprotecting device... ");
+				res = flasher->unprotect();
 			}
-			
-			printf("Programming device... ");
-			res = flasher->flash();
-			if (res == 0)
+			else if (doFlash)
 			{
-				// printf("Programming done\n");
+				printf("Erasing device... ");
+				res = flasher->erase();
+				if (res == 0)
+				{
+					// printf("Erasing done\n");
+				}
+				else
+				{
+					printf("\n");
+					continue;
+				}
+				
+				printf("Programming device... ");
+				res = flasher->flash();
+				if (res == 0)
+				{
+					// printf("Programming done\n");
+				}
+				else
+				{
+					printf("\n");
+					continue;
+				}
+				
+				printf("Reseting device... ");
+				res = flasher->reset();
+				if (res == 0)
+				{
+					// printf("Reseting done\n");
+				}
+				else
+				{
+					printf("\n");
+					continue;
+				}
+				
+				uint32_t endTime = TimeUtilGetSystemTimeMs();
+				float time = endTime - startTime;
+				float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
+				
+				printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 			}
-			else
-			{
-				printf("\n");
-				continue;
-			}
-			
-			printf("Reseting device... ");
-			res = flasher->reset();
-			if (res == 0)
-			{
-				// printf("Reseting done\n");
-			}
-			else
-			{
-				printf("\n");
-				continue;
-			}
-			
-			uint32_t endTime = TimeUtilGetSystemTimeMs();
-			float time = endTime - startTime;
-			float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
-			
-			printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 			break;
 		}
 		// else

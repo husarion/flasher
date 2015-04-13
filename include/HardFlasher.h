@@ -15,10 +15,13 @@ public:
 	int flash();
 	int reset();
 	
+	int protect();
+	int unprotect();
+	
 private:
 	stm32_dev_t m_dev;
 	SerialHandle m_serial;
-
+	
 	int open();
 	int close();
 	
@@ -26,6 +29,9 @@ private:
 	int getVersion();
 	int getCommand();
 	int getID();
+	int writeUnprotect();
+	int writeProtect();
+	int readMemory(uint32_t addr, void* buf, int len);
 	
 	// low-level protocol
 	int uart_send_cmd(uint8_t cmd);

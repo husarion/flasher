@@ -30,6 +30,9 @@ public:
 	virtual int flash() = 0;
 	virtual int reset() = 0;
 
+	virtual int protect() = 0;
+	virtual int unprotect() = 0;
+
 protected:
 	THexFile m_hexFile;
 	string m_device;
