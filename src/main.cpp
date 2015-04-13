@@ -186,12 +186,12 @@ int main(int argc, char** argv)
 			
 			if (doProtect)
 			{
-				printf("Protecting device... ");
+				printf("Protecting bootloader... ");
 				res = flasher->protect();
 			}
 			else if (doUnprotect)
 			{
-				printf("Unprotecting device... ");
+				printf("Unprotecting bootloader... ");
 				res = flasher->unprotect();
 			}
 			else if (doDump)
