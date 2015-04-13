@@ -17,6 +17,7 @@ public:
 	
 	int protect();
 	int unprotect();
+	int dump();
 	
 private:
 	stm32_dev_t m_dev;
@@ -29,9 +30,10 @@ private:
 	int getVersion();
 	int getCommand();
 	int getID();
-	int writeUnprotect();
-	int writeProtect();
 	int readMemory(uint32_t addr, void* buf, int len);
+
+	// misc
+	void dumpOptionBytes();
 	
 	// low-level protocol
 	int uart_send_cmd(uint8_t cmd);

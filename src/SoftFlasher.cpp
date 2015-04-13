@@ -33,7 +33,7 @@ int SoftFlasher::start()
 		printf("Connecting to bootloader... ");
 		int res = open();
 		if (res != 0)
-			return -1;
+			return -2;
 			
 		if (!XcpMasterConnect())
 		{

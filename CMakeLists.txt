@@ -70,3 +70,7 @@ option(X86 "32 bit executable" OFF)
 if(X86)
 	set_target_properties(flasher PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 endif()
+
+if(DEBUG)
+	set_target_properties(flasher PROPERTIES COMPILE_FLAGS "-g" LINK_FLAGS "-g")
+endif()

@@ -30,6 +30,7 @@ int HardFlasher::init()
 }
 int HardFlasher::open()
 {
+	close();
 	m_serial = uart_open(m_baudrate, false);
 	if (m_serial)
 	{
@@ -151,17 +152,7 @@ int HardFlasher::start()
 			
 			
 			
-			uint32_t a;
-			for (int i = 0; i < 16; i += 8)
-			{
-				readMemory(0x1fffc000 + i, &a, 4);
-				// readMemory(0x08000000+i, &a, 4);
-				
-				printf("%d 0x%08x\r\n", i, a);
-			}
 			
-			// 0x1fffc000
-			// 0x1fff000f 0x10 16
 			
 			
 			// if (getVersion())
@@ -229,7 +220,7 @@ int HardFlasher::erase()
 		for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
 		{
 			int pageNr = it->first;
-			// printf("%d ", pageNr);
+			printf("%d ", pageNr);
 			data[2 + idx * 2] = pageNr >> 8;
 			data[2 + idx * 2 + 1] = pageNr & 0xff;
 			idx++;
@@ -351,7 +342,7 @@ int HardFlasher::protect()
 	vector<int> pagesToProtect;
 	pagesToProtect.push_back(0);
 	pagesToProtect.push_back(1);
-
+	
 	uart_send_cmd(0x63);
 	res = uart_read_ack_nack();
 	if (res != ACK)
@@ -368,7 +359,7 @@ int HardFlasher::protect()
 	
 	uart_write_data_checksum(data, sizeof(data));
 	
-	res = uart_read_ack_nack(40000);
+	res = uart_read_ack_nack(1000);
 	if (res != ACK)
 	{
 		printf("ERROR\n");
@@ -402,6 +393,10 @@ int HardFlasher::unprotect()
 	// usleep(1000 * 1000);
 	
 	return 0;
+}
+int HardFlasher::dump()
+{
+	dumpOptionBytes();
 }
 
 // commands
@@ -524,7 +519,7 @@ int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
 	int res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR1\n");
+		printf("ERROR\n");
 		return -1;
 	}
 	uint32_t tmp = SWAP32(addr);
@@ -533,7 +528,7 @@ int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR2\n");
+		printf("ERROR\n");
 		return -1;
 	}
 	char outbuf[2];
@@ -545,18 +540,62 @@ int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
 	
 	if (res != ACK)
 	{
-		printf("ERROR3\n");
+		printf("ERROR\n");
 		return -1;
 	}
 	
 	uart_read_data(buf, len);
-	
 	return 0;
 }
 
 // misc
 void HardFlasher::dumpOptionBytes()
 {
+	// 0x1fffc000
+	// 0x1fff000f 0x10 16
+	
+	uint32_t op1, op2;
+	
+	readMemory(0x1fffc000, &op1, 4);
+	readMemory(0x1fffc008, &op2, 4);
+	printf("0x1fffc000 = 0x%08x\r\n", op1);
+	printf("0x1fffc008 = 0x%08x\r\n", op2);
+	
+	// validating
+	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
+	{
+		printf("er\r\n");
+		return;
+	}
+	if ((~(op2 & 0xffff0000) >> 16) != (op2 & 0x0000ffff))
+	{
+		printf("er\r\n");
+		return;
+	}
+	
+	
+	uint8_t RDP = (op1 & 0x0000ff00) >> 8;
+	printf("RDP: 0x%02x ", RDP);
+	switch (RDP)
+	{
+	case 0xaa: printf("Level 0, no protection"); break;
+	case 0xcc: printf("Level 2, chip protection (debug and boot from RAM features disabled)"); break;
+	default: printf("Level 1, read protection of memories (debug features limited)"); break;
+	}
+	printf("\r\n");
+	printf("nRST_STDBY = %d\r\n", !!(op1 & 0x80));
+	printf("nRST_STOP = %d\r\n", !!(op1 & 0x40));
+	printf("WDG_SW = %d\r\n", !!(op1 & 0x20));
+	printf("BOR_LEV = 0x%1x\r\n", (op1 & 0x0c) >> 2);
+	
+	printf("Protected pages:");
+	uint16_t wrpr = op2 & 0xfff;
+	for (int i = 0; i <= 11; i++)
+	{
+		if (!(wrpr & (1 << i)))
+			printf(" %d", i);
+	}
+	printf("\r\n");
 }
 
 // low-level protocol

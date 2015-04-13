@@ -16,7 +16,12 @@
 #include <vector>
 using namespace std;
 
-int doSoft = 0, doHard = 1, doUnprotect = 0, doProtect = 0, doFlash = 0;
+int doHelp = 0;
+int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0, doDump = 0;
+
+#define BEGIN_CHECK_USAGE() do {
+#define END_CHECK_USAGE() usage(argv); return 1; } while (0);
+#define CHECK_USAGE(x) if(x) break;
 
 uint32_t getTicks()
 {
@@ -30,6 +35,14 @@ void usage(char** argv)
 {
 	fprintf(stderr, "Usage: %s [--hard] [--speed speed] file.hex\n", argv[0]);
 	fprintf(stderr, "       %s --soft --device /dev/ttyUSB0 file.hex\n", argv[0]);
+	fprintf(stderr, "       %s <other options>\n", argv[0]);
+	fprintf(stderr, "\r\n");
+	fprintf(stderr, "other options:\r\n");
+	fprintf(stderr, "       --protect        protects bootloader against\n");
+	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
+	fprintf(stderr, "       --unprotect      unprotects bootloader against\n");
+	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
+	fprintf(stderr, "       --dump           dumps device info (only valid with --hard)\n");
 }
 
 void callback(uint32_t cur, uint32_t total)
@@ -82,9 +95,13 @@ int main(int argc, char** argv)
 		{ "flash",  no_argument,  &doFlash, 1 },
 		{ "unprotect",  no_argument,  &doUnprotect, 1 },
 		{ "protect",  no_argument,    &doProtect, 1 },
+		{ "dump",  no_argument,    &doDump, 1 },
 		
 		{ "device", required_argument, 0, 'd' },
 		{ "speed",  required_argument, 0, 's' },
+
+		{ "usage",  no_argument,    &doHelp, 1 },
+		{ "help",  no_argument,    &doHelp, 1 },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -110,22 +127,25 @@ int main(int argc, char** argv)
 		}
 	}
 	
-	doFlash = !doProtect && !doUnprotect;
-	if (doFlash + doProtect + doUnprotect > 1)
+	doHard = !doSoft;
+	doFlash = !doProtect && !doUnprotect && !doDump;
+	if (doHelp || doFlash + doProtect + doUnprotect > 1)
 	{
 		usage(argv);
 		return 1;
 	}
-	
+
 	const char* filePath = 0;
 	if (optind < argc)
 		filePath = argv[optind];
 		
-	if (doFlash && (!filePath || (doSoft && !device)))
-	{
-		usage(argv);
-		return 1;
-	}
+	BEGIN_CHECK_USAGE();
+	CHECK_USAGE(doHard && doFlash && filePath);
+	CHECK_USAGE(doHard && doProtect);
+	CHECK_USAGE(doHard && doUnprotect);
+	CHECK_USAGE(doHard && doDump);
+	CHECK_USAGE(doSoft && doFlash && device && filePath);
+	END_CHECK_USAGE();
 	
 	Flasher *flasher = 0;
 	if (doHard)
@@ -174,6 +194,11 @@ int main(int argc, char** argv)
 				printf("Unprotecting device... ");
 				res = flasher->unprotect();
 			}
+			else if (doDump)
+			{
+				printf("Dumping info...\r\n");
+				res = flasher->dump();
+			}
 			else if (doFlash)
 			{
 				printf("Erasing device... ");
@@ -218,6 +243,10 @@ int main(int argc, char** argv)
 				
 				printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 			}
+			break;
+		}
+		else if (res == -2)
+		{
 			break;
 		}
 		// else
