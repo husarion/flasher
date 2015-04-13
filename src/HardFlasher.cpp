@@ -145,12 +145,13 @@ int HardFlasher::start()
 			
 			// if (getVersion())
 			// return -1;
+			printf(" ");
 			if (getCommand())
 				return -1;
 			// if (getID())
 			// return -1;
 			
-			printf(" OK\n");
+			printf("OK\n");
 			break;
 		}
 		else

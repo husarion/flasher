@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <stdint.h>
 
+#include <libusb.h>
 #include <ftdi.h>
 #include <ftdi_i.h>
 
@@ -129,6 +130,7 @@ void uart_close(SerialHandle handle)
 	ftdi_context *ftdi = (ftdi_context*)handle;
 	int ret;
 	
+	libusb_attach_kernel_driver(ftdi->usb_dev, ftdi->interface);
 	if ((ret = ftdi_usb_close(ftdi)) < 0)
 		fprintf(stderr, "unable to close ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
 		
