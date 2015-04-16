@@ -154,10 +154,7 @@ int HardFlasher::start()
 			
 			printf("OK\n");
 			
-			printf("Checking configuration... ");
-			if (setup())
-				return -1;
-				
+			
 			// exit(0);
 			break;
 		}
@@ -469,12 +466,23 @@ int HardFlasher::getCommand()
 		return -1;
 	}
 	
-	int len = uart_read_byte() + 1;
+	int len = uart_read_byte();
+	if (len < 0)
+	{
+		printf("get command: invalid len (%d)\n", len);
+		return -1;
+	}
+	
+	len += 1;
 	// printf ("getcmd len: %d\n", len);
 	
 	char d[50];
 	memset(d, 0, 50);
-	uart_read_data(d, len);
+	if (uart_read_data(d, len) == -1)
+	{
+		printf("get command: invalid read\n");
+		return -1;
+	}
 	m_dev.bootVersion = d[0];
 	
 	for (int i = 0; i < 11; i++)

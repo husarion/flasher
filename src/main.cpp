@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 		
 		{ "device", required_argument, 0, 'd' },
 		{ "speed",  required_argument, 0, 's' },
-
+		
 		{ "usage",  no_argument,    &doHelp, 1 },
 		{ "help",  no_argument,    &doHelp, 1 },
 		
@@ -137,12 +137,12 @@ int main(int argc, char** argv)
 	
 	doHard = !doSoft;
 	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister && !doSetup;
-	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister > 1)
+	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup > 1)
 	{
 		usage(argv);
 		return 1;
 	}
-
+	
 	const char* filePath = 0;
 	if (optind < argc)
 		filePath = argv[optind];
@@ -228,6 +228,10 @@ int main(int argc, char** argv)
 			}
 			else if (doFlash)
 			{
+				printf("Checking configuration... ");
+				if (flasher->setup())
+					return -1;
+					
 				printf("Erasing device... ");
 				res = flasher->erase();
 				if (res == 0)

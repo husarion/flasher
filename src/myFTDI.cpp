@@ -37,6 +37,8 @@ SerialHandle uart_open(int speed, bool showErrors)
 		return 0;
 	}
 
+	ftdi->usb_read_timeout = 1000;
+	ftdi->usb_write_timeout = 1000;
 	libusb_set_auto_detach_kernel_driver(ftdi->usb_dev, 1);
 	ftdi_read_data_set_chunksize(ftdi, 4096);
 	::speed = speed;
