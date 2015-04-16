@@ -35,6 +35,9 @@
 
 #include <stdint.h>
 
+#include <string>
+using namespace std;
+
 /****************************************************************************************
 * Type definitions
 ****************************************************************************************/
@@ -52,7 +55,7 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate);
 uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs);
 tXcpTransportResponsePacket *XcpTransportReadResponsePacket(void);
 void XcpTransportClose(void);
-
+const string& XcpTransportGetLastError();
 
 #endif /* XCPTRANSPORT_H */
 /*********************************** end of xcptransport.h *****************************/

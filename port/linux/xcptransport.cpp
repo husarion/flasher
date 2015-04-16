@@ -72,7 +72,16 @@ static speed_t   XcpTransportGetBaudrateMask(uint32_t baudrate);
 static tXcpTransportResponsePacket responsePacket;
 static int32_t hUart = UART_INVALID_HANDLE;
 
-
+string error;
+void setError()
+{
+	char buf[256];
+	error = strerror_r(errno, (char*)&buf, 256);
+}
+const string& XcpTransportGetLastError()
+{
+	return error;
+}
 /************************************************************************************//**
 ** \brief     Initializes the communication interface used by this transport layer.
 ** \param     device Serial communication device name. For example "COM4".
@@ -82,62 +91,63 @@ static int32_t hUart = UART_INVALID_HANDLE;
 ****************************************************************************************/
 uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
 {
-  struct termios options;
-
-  /* open the port */
-  hUart = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
-  /* verify the result */
-  if (hUart == UART_INVALID_HANDLE)
-  {
-    return false;
-  }
-  /* configure the device to block during read operations */
-  if (fcntl(hUart, F_SETFL, 0) == -1)
-  {
-    XcpTransportClose();
-    return false;
-  }
-  /* get the current options for the port */
-  if (tcgetattr(hUart, &options) == -1)
-  {
-    XcpTransportClose();
-    return false;
-  }
-  /* configure the baudrate */
-  if (cfsetispeed(&options, XcpTransportGetBaudrateMask(baudrate)) == -1)
-  {
-    XcpTransportClose();
-    return false;
-  }
-  if (cfsetospeed(&options, XcpTransportGetBaudrateMask(baudrate)) == -1)
-  {
-    XcpTransportClose();
-    return false;
-  }
-  /* enable the receiver and set local mode */
-  options.c_cflag |= (CLOCAL | CREAD);
-  /* configure 8-n-1 */
-  options.c_cflag &= ~PARENB;
-  options.c_cflag &= ~CSTOPB;
-  options.c_cflag &= ~CSIZE;
-  options.c_cflag |= CS8;
-  /* disable hardware flow control */
-  options.c_cflag &= ~CRTSCTS;
-  /* configure raw input */
-  options.c_lflag &= ~(ICANON | ISIG);
-  /* configure raw output */
-  options.c_oflag &= ~OPOST;
-  /* configure timeouts */
-  options.c_cc[VMIN]  = 0;
-  options.c_cc[VTIME] = UART_RX_TIMEOUT_MIN_MS/100; /* 1/10th of a second */
-  /* set the new options for the port */
-  if (tcsetattr(hUart, TCSAFLUSH, &options) == -1)
-  {
-    XcpTransportClose();
-    return false;
-  }
-  /* success */
-  return true;
+	struct termios options;
+	
+	/* open the port */
+	hUart = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
+	/* verify the result */
+	if (hUart == UART_INVALID_HANDLE)
+	{
+		setError();
+		return false;
+	}
+	/* configure the device to block during read operations */
+	if (fcntl(hUart, F_SETFL, 0) == -1)
+	{
+		XcpTransportClose();
+		return false;
+	}
+	/* get the current options for the port */
+	if (tcgetattr(hUart, &options) == -1)
+	{
+		XcpTransportClose();
+		return false;
+	}
+	/* configure the baudrate */
+	if (cfsetispeed(&options, XcpTransportGetBaudrateMask(baudrate)) == -1)
+	{
+		XcpTransportClose();
+		return false;
+	}
+	if (cfsetospeed(&options, XcpTransportGetBaudrateMask(baudrate)) == -1)
+	{
+		XcpTransportClose();
+		return false;
+	}
+	/* enable the receiver and set local mode */
+	options.c_cflag |= (CLOCAL | CREAD);
+	/* configure 8-n-1 */
+	options.c_cflag &= ~PARENB;
+	options.c_cflag &= ~CSTOPB;
+	options.c_cflag &= ~CSIZE;
+	options.c_cflag |= CS8;
+	/* disable hardware flow control */
+	options.c_cflag &= ~CRTSCTS;
+	/* configure raw input */
+	options.c_lflag &= ~(ICANON | ISIG);
+	/* configure raw output */
+	options.c_oflag &= ~OPOST;
+	/* configure timeouts */
+	options.c_cc[VMIN]  = 0;
+	options.c_cc[VTIME] = UART_RX_TIMEOUT_MIN_MS / 100; /* 1/10th of a second */
+	/* set the new options for the port */
+	if (tcsetattr(hUart, TCSAFLUSH, &options) == -1)
+	{
+		XcpTransportClose();
+		return false;
+	}
+	/* success */
+	return true;
 } /*** end of XcpTransportInit ***/
 
 
@@ -152,82 +162,82 @@ uint8_t XcpTransportInit(const char *device, uint32_t baudrate)
 ****************************************************************************************/
 uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
 {
-  uint16_t cnt;
-  static uint8_t xcpUartBuffer[XCP_MASTER_UART_MAX_DATA]; /* static to lower stack load */
-  uint16_t xcpUartLen;
-  int32_t bytesSent;
-  int32_t bytesToRead;
-  int32_t bytesRead;
-  uint8_t *uartReadDataPtr;
-  uint32_t timeoutTime;
-  uint32_t nowTime;
-  ssize_t result;
-
-  /* ------------------------ XCP packet transmission -------------------------------- */
-  /* prepare the XCP packet for transmission on UART. this is basically the same as the
-   * xcp packet data but just the length of the packet is added to the first byte.
-   */
-  xcpUartLen = len+1;
-  xcpUartBuffer[0] = len;
-  for (cnt=0; cnt<len; cnt++)
-  {
-    xcpUartBuffer[cnt+1] = data[cnt];
-  }
-
-  bytesSent = write(hUart, xcpUartBuffer, xcpUartLen);
-
-  if (bytesSent != xcpUartLen)
-  {
-    return false;
-  }
-
-  /* ------------------------ XCP packet reception ----------------------------------- */
-  /* determine timeout time */
-  timeoutTime = TimeUtilGetSystemTimeMs() + timeOutMs + UART_RX_TIMEOUT_MIN_MS;
-
-  /* read the first byte, which contains the length of the xcp packet that follows */
-  bytesToRead = 1;
-  uartReadDataPtr = &responsePacket.len;
-  while(bytesToRead > 0)
-  {
-    result = read(hUart, uartReadDataPtr, bytesToRead);
-    if (result != -1)
-    {
-      bytesRead = result;
-      /* update the bytes that were already read */
-      uartReadDataPtr += bytesRead;
-      bytesToRead -= bytesRead;
-    }
-    /* check for timeout if not yet done */
-    if ( (bytesToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime) )
-    {
-      /* timeout occurred */
-      return false;
-    }
-  }
-
-  /* read the rest of the packet */
-  bytesToRead = responsePacket.len;
-  uartReadDataPtr = &responsePacket.data[0];
-  while(bytesToRead > 0)
-  {
-    result = read(hUart, uartReadDataPtr, bytesToRead);
-    if (result != -1)
-    {
-      bytesRead = result;
-      /* update the bytes that were already read */
-      uartReadDataPtr += bytesRead;
-      bytesToRead -= bytesRead;
-    }
-    /* check for timeout if not yet done */
-    if ( (bytesToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime) )
-    {
-      /* timeout occurred */
-      return false;
-    }
-  }
-  /* still here so the complete packet was received */
-  return true;
+	uint16_t cnt;
+	static uint8_t xcpUartBuffer[XCP_MASTER_UART_MAX_DATA]; /* static to lower stack load */
+	uint16_t xcpUartLen;
+	int32_t bytesSent;
+	int32_t bytesToRead;
+	int32_t bytesRead;
+	uint8_t *uartReadDataPtr;
+	uint32_t timeoutTime;
+	uint32_t nowTime;
+	ssize_t result;
+	
+	/* ------------------------ XCP packet transmission -------------------------------- */
+	/* prepare the XCP packet for transmission on UART. this is basically the same as the
+	 * xcp packet data but just the length of the packet is added to the first byte.
+	 */
+	xcpUartLen = len + 1;
+	xcpUartBuffer[0] = len;
+	for (cnt = 0; cnt < len; cnt++)
+	{
+		xcpUartBuffer[cnt + 1] = data[cnt];
+	}
+	
+	bytesSent = write(hUart, xcpUartBuffer, xcpUartLen);
+	
+	if (bytesSent != xcpUartLen)
+	{
+		return false;
+	}
+	
+	/* ------------------------ XCP packet reception ----------------------------------- */
+	/* determine timeout time */
+	timeoutTime = TimeUtilGetSystemTimeMs() + timeOutMs + UART_RX_TIMEOUT_MIN_MS;
+	
+	/* read the first byte, which contains the length of the xcp packet that follows */
+	bytesToRead = 1;
+	uartReadDataPtr = &responsePacket.len;
+	while (bytesToRead > 0)
+	{
+		result = read(hUart, uartReadDataPtr, bytesToRead);
+		if (result != -1)
+		{
+			bytesRead = result;
+			/* update the bytes that were already read */
+			uartReadDataPtr += bytesRead;
+			bytesToRead -= bytesRead;
+		}
+		/* check for timeout if not yet done */
+		if ((bytesToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime))
+		{
+			/* timeout occurred */
+			return false;
+		}
+	}
+	
+	/* read the rest of the packet */
+	bytesToRead = responsePacket.len;
+	uartReadDataPtr = &responsePacket.data[0];
+	while (bytesToRead > 0)
+	{
+		result = read(hUart, uartReadDataPtr, bytesToRead);
+		if (result != -1)
+		{
+			bytesRead = result;
+			/* update the bytes that were already read */
+			uartReadDataPtr += bytesRead;
+			bytesToRead -= bytesRead;
+		}
+		/* check for timeout if not yet done */
+		if ((bytesToRead > 0) && (TimeUtilGetSystemTimeMs() >= timeoutTime))
+		{
+			/* timeout occurred */
+			return false;
+		}
+	}
+	/* still here so the complete packet was received */
+	return true;
 } /*** end of XcpMasterTpSendPacket ***/
 
 
@@ -240,7 +250,7 @@ uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
 ****************************************************************************************/
 tXcpTransportResponsePacket *XcpTransportReadResponsePacket(void)
 {
-  return &responsePacket;
+	return &responsePacket;
 } /*** end of XcpTransportReadResponsePacket ***/
 
 
@@ -251,14 +261,14 @@ tXcpTransportResponsePacket *XcpTransportReadResponsePacket(void)
 ****************************************************************************************/
 void XcpTransportClose(void)
 {
-  /* close the COM port handle if valid */
-  if (hUart != UART_INVALID_HANDLE)
-  {
-    close(hUart);
-  }
-
-  /* set handles to invalid */
-  hUart = UART_INVALID_HANDLE;
+	/* close the COM port handle if valid */
+	if (hUart != UART_INVALID_HANDLE)
+	{
+		close(hUart);
+	}
+	
+	/* set handles to invalid */
+	hUart = UART_INVALID_HANDLE;
 } /*** end of XcpTransportClose ***/
 
 
@@ -270,37 +280,37 @@ void XcpTransportClose(void)
 ****************************************************************************************/
 static speed_t XcpTransportGetBaudrateMask(uint32_t baudrate)
 {
-  speed_t result;
-
-  switch (baudrate)
-  {
-    case 921600:
-      result = B921600;
-      break;
-    case 460800:
-      result = B460800;
-      break;
-    case 230400:
-      result = B230400;
-      break;
-    case 115200:
-      result = B115200;
-      break;
-    case 57600:
-      result = B57600;
-      break;
-    case 38400:
-      result = B38400;
-      break;
-    case 19200:
-      result = B19200;
-      break;
-    case 9600:
-    default:
-      result = B9600;
-      break;
-  }
-  return result;
+	speed_t result;
+	
+	switch (baudrate)
+	{
+	case 921600:
+		result = B921600;
+		break;
+	case 460800:
+		result = B460800;
+		break;
+	case 230400:
+		result = B230400;
+		break;
+	case 115200:
+		result = B115200;
+		break;
+	case 57600:
+		result = B57600;
+		break;
+	case 38400:
+		result = B38400;
+		break;
+	case 19200:
+		result = B19200;
+		break;
+	case 9600:
+	default:
+		result = B9600;
+		break;
+	}
+	return result;
 } /*** end of XcpTransportGetBaudrateMask ***/
 
 
