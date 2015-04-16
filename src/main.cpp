@@ -13,11 +13,16 @@
 #include "HardFlasher.h"
 #include "SoftFlasher.h"
 
+#ifdef EMBED_BOOTLOADERS
+#include "bootloaders.h"
+#endif
+
 #include <vector>
 using namespace std;
 
 int doHelp = 0;
-int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0, doDump = 0, doRegister = 0, doSetup = 0;
+int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
+    doDump = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0;
 
 #define BEGIN_CHECK_USAGE() do {
 #define END_CHECK_USAGE() usage(argv); return 1; } while (0);
@@ -95,6 +100,9 @@ int main(int argc, char** argv)
 		
 		{ "test",  no_argument,  &doUnprotect, 1 },
 		{ "flash",  no_argument,  &doFlash, 1 },
+#ifdef EMBED_BOOTLOADERS
+		{ "flash-bootloader",  no_argument,    &doFlashBootloader, 1 },
+#endif
 		{ "unprotect",  no_argument,  &doUnprotect, 1 },
 		{ "protect",  no_argument,    &doProtect, 1 },
 		{ "dump",  no_argument,    &doDump, 1 },
@@ -136,8 +144,8 @@ int main(int argc, char** argv)
 	}
 	
 	doHard = !doSoft;
-	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister && !doSetup;
-	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup > 1)
+	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister && !doSetup && !doFlashBootloader;
+	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup + doFlashBootloader > 1)
 	{
 		usage(argv);
 		return 1;
@@ -154,6 +162,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doDump);
 	CHECK_USAGE(doHard && doRegister);
 	CHECK_USAGE(doHard && doSetup);
+	CHECK_USAGE(doHard && doFlashBootloader);
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
 	END_CHECK_USAGE();
 	
@@ -234,11 +243,7 @@ int main(int argc, char** argv)
 					
 				printf("Erasing device... ");
 				res = flasher->erase();
-				if (res == 0)
-				{
-					// printf("Erasing done\n");
-				}
-				else
+				if (res != 0)
 				{
 					printf("\n");
 					continue;
@@ -246,11 +251,7 @@ int main(int argc, char** argv)
 				
 				printf("Programming device... ");
 				res = flasher->flash();
-				if (res == 0)
-				{
-					// printf("Programming done\n");
-				}
-				else
+				if (res != 0)
 				{
 					printf("\n");
 					continue;
@@ -258,11 +259,7 @@ int main(int argc, char** argv)
 				
 				printf("Reseting device... ");
 				res = flasher->reset();
-				if (res == 0)
-				{
-					// printf("Reseting done\n");
-				}
-				else
+				if (res != 0)
 				{
 					printf("\n");
 					continue;
@@ -274,6 +271,113 @@ int main(int argc, char** argv)
 				
 				printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 			}
+#ifdef EMBED_BOOTLOADERS
+			else if (doFlashBootloader)
+			{
+				static int stage = 0;
+				
+				if (stage == 0)
+				{
+					printf("Checking version... ");
+					TRoboCOREHeader h;
+					HardFlasher *hf = (HardFlasher*)flasher;
+					res = hf->readHeader(h);
+					if (h.isClear())
+					{
+						printf("unable, device is unregistered, register it first.\r\n");
+						break;
+					}
+					
+					printf("OK\r\n");
+					char buf[50];
+					int a, b, c, d;
+					parseVersion(h.version, a, b, c, d);
+					switch (h.type)
+					{
+					case 1: sprintf(buf, "bootloader_%d_%d_%d_mini", a, b, c); break;
+					case 2: sprintf(buf, "bootloader_%d_%d_%d_big", a, b, c); break;
+					default:
+						printf("Unsupported version\r\n");
+						break;
+					}
+					
+					bool found = false;
+					TBootloaderData* ptr = bootloaders;
+					while (ptr->name)
+					{
+						if (strcmp(ptr->name, buf) == 0)
+						{
+							found = true;
+							break;
+						}
+						ptr++;
+					}
+					
+					if (!found)
+					{
+						printf("Bootloader not found\r\n");
+						break;
+					}
+					
+					printf("Bootloader found\r\n");
+					
+					flasher->loadData(ptr->data);
+					
+					printf("Checking configuration... ");
+					if (flasher->setup())
+						return -1;
+						
+					printf("Unprotecting bootloader... ");
+					res = flasher->unprotect();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+					
+					stage = 1; // device must be reseted after unprotecting
+					printf("Resetting device\r\n");
+					continue;
+				}
+				else if (stage == 1)
+				{
+					printf("Erasing device... ");
+					res = flasher->erase();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+					
+					printf("Programming device... ");
+					res = flasher->flash();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+					
+					printf("Protecting bootloader... ");
+					res = flasher->protect();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+					
+					printf("Reseting device... ");
+					res = flasher->reset();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+					
+					// printf("searching for bootloader %s", buf);
+					// printf("%s\n", buf);
+				}
+			}
+#endif
 			break;
 		}
 		else if (res == -2)

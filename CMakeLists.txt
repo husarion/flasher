@@ -35,6 +35,12 @@ set(COMMON_SOURCES src/main.cpp src/myFTDI.cpp src/devices.cpp src/ihex.cpp src/
 	src/HardFlasher.cpp src/Flasher.cpp src/SoftFlasher.cpp
 	${PROJECT_PORT_DIR}/xcptransport.cpp ${PROJECT_PORT_DIR}/timeutil.cpp)
 
+if(EMBED_BOOTLOADERS)
+	set(COMMON_SOURCES ${COMMON_SOURCES} gen/bootloaders.cpp)
+	include_directories(${CURRENT_DIR}/gen)
+	add_definitions(-DEMBED_BOOTLOADERS)
+endif()
+
 if(WIN32)
 	set(TARGET_NAME flasher.exe)
 

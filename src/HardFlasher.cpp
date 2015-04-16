@@ -399,6 +399,11 @@ int HardFlasher::setup()
 	
 	return 0;
 }
+int HardFlasher::readHeader(TRoboCOREHeader& header)
+{
+	const uint32_t OTP_BASE = OTP_START + 32 * 0;
+	return readMemory(OTP_BASE, &header, sizeof(header));
+}
 int HardFlasher::writeHeader(TRoboCOREHeader& header)
 {
 	const uint32_t OTP_BASE = OTP_START + 32 * 0;

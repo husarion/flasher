@@ -25,6 +25,7 @@ public:
 	~THexFile();
 	
 	int load(const std::string& path);
+	int loadData(const char* data);
 	
 	int totalLength;
 	
@@ -32,6 +33,11 @@ public:
 	
 private:
 	TPart* findPart(uint32_t addr);
+
+	int parseLine(const std::string& line);
+
+	uint32_t maxAddr;
+	uint32_t extAddr2, extAddr4;
 };
 
 

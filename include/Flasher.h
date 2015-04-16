@@ -15,6 +15,7 @@ public:
 	Flasher() : m_callback(0) { }
 
 	int load(const string& path);
+	int loadData(const char* data);
 
 	void setDevice(const string& device) { m_device = device; }
 	void setBaudrate(int baudrate) { m_baudrate = baudrate; }

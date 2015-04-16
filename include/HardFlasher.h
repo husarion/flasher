@@ -22,6 +22,7 @@ public:
 	int dump();
 	int setup();
 
+	int readHeader(TRoboCOREHeader& header);
 	int writeHeader(TRoboCOREHeader& header);
 	
 private:
