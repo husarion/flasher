@@ -32,6 +32,10 @@ extern const int flashPages;
 const uint32_t OPTION_BYTE_1 = 0x1fffc000;
 const uint32_t OPTION_BYTE_2 = 0x1fffc008;
 
+const uint32_t BOR_MASK = 0x0000000c;
+const uint32_t BOR_BIT = 2;
+const uint32_t BOR_LEVEL = 0b10;
+
 const uint32_t OTP_START = 0x1fff7800;
 const uint32_t OTP_LOCK_START = 0x1fff7a00;
 

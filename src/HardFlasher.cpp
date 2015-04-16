@@ -375,8 +375,7 @@ int HardFlasher::setup()
 	
 	if (readMemory(OPTION_BYTE_1, &op1, 4))
 		return -1;
-	// printf("0x1fffc000 = 0x%08x\r\n", op1);
-	
+		
 	// validating
 	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
 	{
@@ -384,11 +383,11 @@ int HardFlasher::setup()
 		return -1;
 	}
 	
-	uint8_t curBOR = (op1 & 0x0c) >> 2;
+	uint8_t curBOR = (op1 & BOR_MASK) >> BOR_BIT;
 	if (curBOR != 0b10)
 	{
-		op1 &= 0x0000fff3;
-		op1 |= 0b10 << 2;
+		op1 &= ~BOR_MASK;
+		op1 |= BOR_LEVEL << BOR_BIT;
 		if (writeMemory(OPTION_BYTE_1, &op1, 2))
 			return -1;
 		printf("CHANGED\r\n");
@@ -618,15 +617,12 @@ int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 // misc
 void HardFlasher::dumpOptionBytes()
 {
-	// 0x1fffc000
-	// 0x1fff000f 0x10 16
-	
 	uint32_t op1, op2;
 	
 	readMemory(OPTION_BYTE_1, &op1, 4);
 	readMemory(OPTION_BYTE_2, &op2, 4);
-	printf("0x1fffc000 = 0x%08x\r\n", op1);
-	printf("0x1fffc008 = 0x%08x\r\n", op2);
+	// printf("0x1fffc000 = 0x%08x\r\n", op1);
+	// printf("0x1fffc008 = 0x%08x\r\n", op2);
 	
 	// validating
 	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
@@ -640,9 +636,10 @@ void HardFlasher::dumpOptionBytes()
 		return;
 	}
 	
-	
+	printf("\r\n");
+	printf("Option bytes:\r\n");
 	uint8_t RDP = (op1 & 0x0000ff00) >> 8;
-	printf("RDP: 0x%02x ", RDP);
+	printf("RDP        = 0x%02x - ", RDP);
 	switch (RDP)
 	{
 	case 0xaa: printf("Level 0, no protection"); break;
@@ -651,9 +648,16 @@ void HardFlasher::dumpOptionBytes()
 	}
 	printf("\r\n");
 	printf("nRST_STDBY = %d\r\n", !!(op1 & 0x80));
-	printf("nRST_STOP = %d\r\n", !!(op1 & 0x40));
-	printf("WDG_SW = %d\r\n", !!(op1 & 0x20));
-	printf("BOR_LEV = 0x%1x\r\n", (op1 & 0x0c) >> 2);
+	printf("nRST_STOP  = %d\r\n", !!(op1 & 0x40));
+	printf("WDG_SW     = %d\r\n", !!(op1 & 0x20));
+	uint8_t curBOR = (op1 & BOR_MASK) >> BOR_BIT;
+	switch (curBOR)
+	{
+	case 0b00: printf("BOR_LEV    = 0b00 - Reset threshold level from 2.70 to 3.60 V\r\n"); break;
+	case 0b01: printf("BOR_LEV    = 0b01 - Reset threshold level from 2.40 to 2.70 V\r\n"); break;
+	case 0b10: printf("BOR_LEV    = 0b10 - Reset threshold level from 2.10 to 2.40 V\r\n"); break;
+	case 0b11: printf("BOR_LEV    = 0b11 - Reset threshold level from 1.8 to 2.10 V\r\n"); break;
+	}
 	
 	printf("Protected pages:");
 	uint16_t wrpr = op2 & 0xfff;
@@ -699,7 +703,6 @@ void HardFlasher::dumpOptionBytes()
 		case 2:  printf("Type           = BIG\r\n"); break;
 		default: printf("Type           = (unknown %d)\r\n", header.type); break;
 		}
-		printf("Type           = %d\r\n", header.type);
 		printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
 		printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
 	}
