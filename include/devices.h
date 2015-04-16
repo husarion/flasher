@@ -16,15 +16,7 @@ struct stm32_dev_t
 	uint16_t id;
 	uint8_t version, option1, option2, bootVersion;
 	uint8_t cmds[11];
-	
 	stm32_dev_info_t *info;
-};
-struct stm32_dev_info_t
-{
-	uint16_t id;
-	uint32_t flashStart, flashEnd;
-	uint32_t optStart, optEnd;
-	int sectors;
 };
 
 typedef struct 
@@ -37,8 +29,12 @@ typedef struct
 extern const tFlashSector flashLayout[];
 extern const int flashPages;
 
-extern stm32_dev_info_t devices[];
+const uint32_t OPTION_BYTE_1 = 0x1fffc000;
+const uint32_t OPTION_BYTE_2 = 0x1fffc008;
 
-stm32_dev_info_t* findDeviceInfo(const stm32_dev_t& device);
+const uint32_t OTP_START = 0x1fff7800;
+const uint32_t OTP_LOCK_START = 0x1fff7a00;
+
+void parseVersion(uint32_t version, int& a, int& b, int& c, int& d);
 
 #endif

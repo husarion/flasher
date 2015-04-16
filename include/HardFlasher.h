@@ -5,6 +5,7 @@
 
 #include "devices.h"
 #include "myFTDI.h"
+#include "header.h"
 
 class HardFlasher : public Flasher
 {
@@ -18,6 +19,9 @@ public:
 	int protect();
 	int unprotect();
 	int dump();
+	int setup();
+
+	int writeHeader(TRoboCOREHeader& header);
 	
 private:
 	stm32_dev_t m_dev;
@@ -30,7 +34,8 @@ private:
 	int getVersion();
 	int getCommand();
 	int getID();
-	int readMemory(uint32_t addr, void* buf, int len);
+	int readMemory(uint32_t addr, void* data, int len);
+	int writeMemory(uint32_t addr, const void* data, int len);
 
 	// misc
 	void dumpOptionBytes();

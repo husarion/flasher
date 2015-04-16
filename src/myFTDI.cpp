@@ -70,7 +70,7 @@ int uart_reset(SerialHandle handle)
 	setPin(ftdi, RST, 1);
 	usleep(100000);
 	setPin(ftdi, RST, 0);
-	usleep(500000);
+	usleep(100000);
 	
 	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, EVEN);
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);

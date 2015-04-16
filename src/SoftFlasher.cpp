@@ -30,10 +30,13 @@ int SoftFlasher::start()
 {
 	for (;;)
 	{
-		printf("Connecting to bootloader... ");
+		printf("Connecting to bootloader (%s)... ", m_device.c_str());
 		int res = open();
 		if (res != 0)
+		{
+			printf("unable (%s)\n", XcpTransportGetLastError().c_str());
 			return -2;
+		}
 			
 		if (!XcpMasterConnect())
 		{

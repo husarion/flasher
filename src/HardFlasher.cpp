@@ -11,6 +11,7 @@ using namespace std;
 
 #include "myFTDI.h"
 #include "timeutil.h"
+#include "header.h"
 
 #define ACK 0x79
 #define NACK 0x1f
@@ -143,18 +144,6 @@ int HardFlasher::start()
 		// printf("res 0x%02x\r\n", (unsigned char)res);
 		if (res == ACK || res == NACK)
 		{
-			// printf("connected\n");
-			// printf("device answered with 0x%02x\n", (unsigned char)res);
-			
-			
-// writeUnprotect();
-			// writeProtect();
-			
-			
-			
-			
-			
-			
 			// if (getVersion())
 			// return -1;
 			printf(" ");
@@ -164,6 +153,10 @@ int HardFlasher::start()
 			// return -1;
 			
 			printf("OK\n");
+			
+			
+			
+			// exit(0);
 			break;
 		}
 		else
@@ -262,8 +255,6 @@ int HardFlasher::erase()
 }
 int HardFlasher::flash()
 {
-	char buf[256 + 1];
-	
 	uint32_t sent = 0;
 	
 	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
@@ -280,47 +271,22 @@ int HardFlasher::flash()
 			
 			// printf("writing 0x%08x len: %d...\n", curAddr, len);
 			
-			uart_send_cmd(0x31);
-			
-			int res = uart_read_ack_nack();
-			if (res != ACK)
+			int res = writeMemory(curAddr, data, len);
+			if (res == 0)
+			{
+				sent += len;
+				curAddr += len;
+				data += len;
+				
+				if (m_callback)
+					m_callback(sent, m_hexFile.totalLength);
+			}
+			else
 			{
 				if (m_callback)
 					m_callback(-1, -1);
-				printf("ERROR\n");
 				return -1;
 			}
-			uint32_t tmp = SWAP32(curAddr);
-			uart_write_data_checksum((char*)&tmp, 4);
-			
-			res = uart_read_ack_nack();
-			if (res != ACK)
-			{
-				if (m_callback)
-					m_callback(-1, -1);
-				printf("ERROR\n");
-				return -1;
-			}
-			buf[0] = len - 1;
-			memcpy(buf + 1, data, len);
-			
-			uart_write_data_checksum(buf, len + 1);
-			res = uart_read_ack_nack();
-			
-			if (res != ACK)
-			{
-				if (m_callback)
-					m_callback(-1, -1);
-				printf("ERROR\n");
-				return -1;
-			}
-			
-			sent += len;
-			curAddr += len;
-			data += len;
-			
-			if (m_callback)
-				m_callback(sent, m_hexFile.totalLength);
 		}
 	}
 	if (m_callback)
@@ -397,6 +363,47 @@ int HardFlasher::unprotect()
 int HardFlasher::dump()
 {
 	dumpOptionBytes();
+	return 0;
+}
+int HardFlasher::setup()
+{
+	uint32_t op1;
+	
+	readMemory(OPTION_BYTE_1, &op1, 4);
+	// printf("0x1fffc000 = 0x%08x\r\n", op1);
+	
+	// validating
+	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
+	{
+		printf("FAIL (invalid read)\r\n");
+		return -1;
+	}
+	
+	op1 &= 0x0000fff3;
+	op1 |= 0b1000;
+	
+	writeMemory(OPTION_BYTE_1, &op1, 2);
+	
+	return 0;
+}
+int HardFlasher::writeHeader(TRoboCOREHeader& header)
+{
+	const uint32_t OTP_BASE = OTP_START + 32 * 0;
+	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
+	
+	// memset(&header, 0, sizeof(header));
+	writeMemory(OTP_BASE, &header, sizeof(header));
+	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
+	       header.headerVersion, header.type, header.version, header.id);
+	       
+	TRoboCOREHeader rbheader;
+	readMemory(OTP_BASE, &rbheader, sizeof(rbheader));
+	
+	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
+	       rbheader.headerVersion, rbheader.type, rbheader.version, rbheader.id);
+	       
+	uint8_t d[] = { 0x00 };
+	writeMemory(OTP_LOCK, d, 1);
 }
 
 // commands
@@ -512,9 +519,46 @@ int HardFlasher::getID()
 	
 	return 0;
 }
-int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
+int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 {
 	uart_send_cmd(0x11);
+	
+	int res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("ERROR1\n");
+		return -1;
+	}
+	uint32_t tmp = SWAP32(addr);
+	uart_write_data_checksum((char*)&tmp, 4);
+	
+	res = uart_read_ack_nack();
+	if (res != ACK)
+	{
+		printf("ERROR2\n");
+		return -1;
+	}
+	uint8_t outbuf[2];
+	outbuf[0] = len - 1;
+	outbuf[1] = 0xff - outbuf[0];
+	
+	uart_write_data(outbuf, 2);
+	res = uart_read_ack_nack(1000);
+	
+	if (res != ACK)
+	{
+		printf("ERROR3\n");
+		return -1;
+	}
+	
+	int r = uart_read_data(data, len);
+	return 0;
+}
+int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
+{
+	char buf[256 + 1];
+	
+	uart_send_cmd(0x31);
 	
 	int res = uart_read_ack_nack();
 	if (res != ACK)
@@ -531,12 +575,11 @@ int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
 		printf("ERROR\n");
 		return -1;
 	}
-	char outbuf[2];
-	outbuf[0] = len - 1;
-	outbuf[1] = 0xff - outbuf[0];
+	buf[0] = len - 1;
+	memcpy(buf + 1, data, len);
 	
-	uart_write_data(outbuf, 2);
-	res = uart_read_ack_nack(1000);
+	uart_write_data_checksum(buf, len + 1);
+	res = uart_read_ack_nack();
 	
 	if (res != ACK)
 	{
@@ -544,7 +587,6 @@ int HardFlasher::readMemory(uint32_t addr, void* buf, int len)
 		return -1;
 	}
 	
-	uart_read_data(buf, len);
 	return 0;
 }
 
@@ -556,8 +598,8 @@ void HardFlasher::dumpOptionBytes()
 	
 	uint32_t op1, op2;
 	
-	readMemory(0x1fffc000, &op1, 4);
-	readMemory(0x1fffc008, &op2, 4);
+	readMemory(OPTION_BYTE_1, &op1, 4);
+	readMemory(OPTION_BYTE_2, &op2, 4);
 	printf("0x1fffc000 = 0x%08x\r\n", op1);
 	printf("0x1fffc008 = 0x%08x\r\n", op2);
 	
@@ -596,6 +638,46 @@ void HardFlasher::dumpOptionBytes()
 			printf(" %d", i);
 	}
 	printf("\r\n");
+	
+	printf("\r\n");
+	printf("Registration data:");
+	const uint32_t OTP_BASE = OTP_START + 32 * 0;
+	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
+	
+	TRoboCOREHeader header;
+	readMemory(OTP_BASE, &header, sizeof(header));
+
+	uint8_t lock;
+	readMemory(OTP_LOCK, &lock, 1);
+	switch(lock)
+	{
+	case 0x00: printf(" (LOCKED)"); break;
+	case 0xff: printf(" (UNLOCKED)"); break;
+	default: printf(" (INVALID LOCK 0x%02x)", lock); break;
+	}
+
+	printf("\r\n");
+	
+	if (header.isClear())
+	{
+		printf("UNREGISTERED\r\n");
+	}
+	else
+	{
+		int a, b, c, d;
+		parseVersion(header.version, a, b, c, d);
+		
+		printf("Header version = 0x%02x\r\n", header.headerVersion);
+		switch (header.type)
+		{
+		case 1:  printf("Type           = MINI\r\n"); break;
+		case 2:  printf("Type           = BIG\r\n"); break;
+		default: printf("Type           = (unknown %d)\r\n", header.type); break;
+		}
+		printf("Type           = %d\r\n", header.type);
+		printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
+		printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
+	}
 }
 
 // low-level protocol

@@ -1,30 +1,5 @@
 #include "devices.h"
 
-void stm32f40xxx_stm32f41xxx_update(stm32_dev_t* dev);
-
-stm32_dev_info_t devices[] =
-{
-	{
-		.id = 0x0413,
-		.flashStart = 0x08000000,
-		.flashEnd = 0x0805ffff,
-		.optStart = 0x1fffc000,
-		.optEnd = 0x1fffc00f,
-		.sectors = 11,
-	},
-	{
-		.id = 0,
-	}
-};
-
-stm32_dev_info_t* findDeviceInfo(const stm32_dev_t& device)
-{
-	for (int i = 0; devices[i].id != 0; i++)
-		if (devices[i].id == device.id)
-			return &devices[i];
-	return 0;
-}
-
 const tFlashSector flashLayout[] =
 {
   { 0x08000000, 0x04000,  0},           /* flash sector  0 - reserved for bootloader   */
@@ -57,3 +32,11 @@ const tFlashSector flashLayout[] =
 // #endif
 };
 const int flashPages = sizeof(flashLayout) / sizeof(flashLayout[0]);
+
+void parseVersion(uint32_t version, int& a, int& b, int& c, int& d)
+{
+	a = (version >> 24) & 0xff;
+	b = (version >> 16) & 0xff;
+	c = (version >>  8) & 0xff;
+	d = (version >>  0) & 0xff;
+}

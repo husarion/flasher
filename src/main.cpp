@@ -17,7 +17,7 @@
 using namespace std;
 
 int doHelp = 0;
-int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0, doDump = 0;
+int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0, doDump = 0, doRegister = 0, doSetup = 0;
 
 #define BEGIN_CHECK_USAGE() do {
 #define END_CHECK_USAGE() usage(argv); return 1; } while (0);
@@ -38,6 +38,7 @@ void usage(char** argv)
 	fprintf(stderr, "       %s <other options>\n", argv[0]);
 	fprintf(stderr, "\r\n");
 	fprintf(stderr, "other options:\r\n");
+	fprintf(stderr, "       --setup          setup option bits\n");
 	fprintf(stderr, "       --protect        protects bootloader against\n");
 	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
 	fprintf(stderr, "       --unprotect      unprotects bootloader against\n");
@@ -83,6 +84,7 @@ int main(int argc, char** argv)
 	int speed = 460800;
 	const char* device = 0;
 	int res;
+	int regid;
 	
 	setvbuf(stdout, NULL, _IONBF, 0);
 	
@@ -96,6 +98,8 @@ int main(int argc, char** argv)
 		{ "unprotect",  no_argument,  &doUnprotect, 1 },
 		{ "protect",  no_argument,    &doProtect, 1 },
 		{ "dump",  no_argument,    &doDump, 1 },
+		{ "setup",  no_argument,    &doSetup, 1 },
+		{ "register",  required_argument,    0, 'r' },
 		
 		{ "device", required_argument, 0, 'd' },
 		{ "speed",  required_argument, 0, 's' },
@@ -124,12 +128,16 @@ int main(int argc, char** argv)
 			if (speed == 0)
 				speed = 460800;
 			break;
+		case 'r':
+			regid = atoi(optarg);
+			doRegister = 1;
+			break;
 		}
 	}
 	
 	doHard = !doSoft;
-	doFlash = !doProtect && !doUnprotect && !doDump;
-	if (doHelp || doFlash + doProtect + doUnprotect > 1)
+	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister && !doSetup;
+	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister > 1)
 	{
 		usage(argv);
 		return 1;
@@ -144,6 +152,8 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doProtect);
 	CHECK_USAGE(doHard && doUnprotect);
 	CHECK_USAGE(doHard && doDump);
+	CHECK_USAGE(doHard && doRegister);
+	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
 	END_CHECK_USAGE();
 	
@@ -156,7 +166,7 @@ int main(int argc, char** argv)
 	if (doSoft)
 	{
 		flasher = new SoftFlasher();
-		flasher->setBaudrate(921600);
+		flasher->setBaudrate(460800);
 		flasher->setDevice(device);
 	}
 	flasher->setCallback(&callback);
@@ -198,6 +208,23 @@ int main(int argc, char** argv)
 			{
 				printf("Dumping info...\r\n");
 				res = flasher->dump();
+			}
+			else if (doSetup)
+			{
+				printf("Testing settings... ");
+				res = flasher->setup();
+			}
+			else if (doRegister)
+			{
+				printf("Registering...\r\n");
+				TRoboCOREHeader h;
+				h.headerVersion = 0x01;
+				h.type = 0x02;
+				h.version = 0x00090600;
+				h.id = regid;
+				h.key[0] = 0x00;
+				HardFlasher *hf = (HardFlasher*)flasher;
+				res = hf->writeHeader(h);
 			}
 			else if (doFlash)
 			{
@@ -247,13 +274,9 @@ int main(int argc, char** argv)
 		}
 		else if (res == -2)
 		{
+			// printf("\r\n");
 			break;
 		}
-		// else
-		// {
-		// printf("unable to start flashing\n");
-		// return 1;
-		// }
 	}
 	
 	flasher->close();
