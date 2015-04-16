@@ -35,7 +35,7 @@ int HardFlasher::open()
 	m_serial = uart_open(m_baudrate, false);
 	if (m_serial)
 	{
-		printf(" connected\r\n");
+		printf(" OK\r\n");
 		printf("Checking settings... ");
 		int r = uart_check_gpio(m_serial);
 		if (r)
@@ -75,7 +75,7 @@ int HardFlasher::open()
 					cnt = 0;
 				}
 			}
-			printf(" connected\r\n");
+			printf(" OK\r\n");
 		}
 		else
 		{
@@ -154,8 +154,10 @@ int HardFlasher::start()
 			
 			printf("OK\n");
 			
-			
-			
+			printf("Checking configuration... ");
+			if (setup())
+				return -1;
+				
 			// exit(0);
 			break;
 		}
@@ -301,6 +303,11 @@ int HardFlasher::reset()
 	printf("OK\n");
 	return 0;
 }
+int HardFlasher::cleanup()
+{
+	close();
+}
+
 int HardFlasher::protect()
 {
 	int res;
@@ -319,7 +326,7 @@ int HardFlasher::protect()
 	uint8_t data[1 + pagesToProtect.size()];
 	data[0] = (pagesToProtect.size() - 1) & 0xff;
 	int idx = 0;
-	for (int i = 0; i < pagesToProtect.size(); i++)
+	for (unsigned int i = 0; i < pagesToProtect.size(); i++)
 		data[1 + i] = pagesToProtect[i];
 	// printf("\n");
 	
@@ -369,7 +376,8 @@ int HardFlasher::setup()
 {
 	uint32_t op1;
 	
-	readMemory(OPTION_BYTE_1, &op1, 4);
+	if (readMemory(OPTION_BYTE_1, &op1, 4))
+		return -1;
 	// printf("0x1fffc000 = 0x%08x\r\n", op1);
 	
 	// validating
@@ -379,10 +387,19 @@ int HardFlasher::setup()
 		return -1;
 	}
 	
-	op1 &= 0x0000fff3;
-	op1 |= 0b1000;
-	
-	writeMemory(OPTION_BYTE_1, &op1, 2);
+	uint8_t curBOR = (op1 & 0x0c) >> 2;
+	if (curBOR != 0b10)
+	{
+		op1 &= 0x0000fff3;
+		op1 |= 0b10 << 2;
+		if (writeMemory(OPTION_BYTE_1, &op1, 2))
+			return -1;
+		printf("CHANGED\r\n");
+	}
+	else
+	{
+		printf("OK\r\n");
+	}
 	
 	return 0;
 }
@@ -646,16 +663,16 @@ void HardFlasher::dumpOptionBytes()
 	
 	TRoboCOREHeader header;
 	readMemory(OTP_BASE, &header, sizeof(header));
-
+	
 	uint8_t lock;
 	readMemory(OTP_LOCK, &lock, 1);
-	switch(lock)
+	switch (lock)
 	{
 	case 0x00: printf(" (LOCKED)"); break;
 	case 0xff: printf(" (UNLOCKED)"); break;
 	default: printf(" (INVALID LOCK 0x%02x)", lock); break;
 	}
-
+	
 	printf("\r\n");
 	
 	if (header.isClear())

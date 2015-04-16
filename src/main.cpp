@@ -211,7 +211,7 @@ int main(int argc, char** argv)
 			}
 			else if (doSetup)
 			{
-				printf("Testing settings... ");
+				printf("Checking configuration... ");
 				res = flasher->setup();
 			}
 			else if (doRegister)
@@ -279,14 +279,7 @@ int main(int argc, char** argv)
 		}
 	}
 	
-	flasher->close();
+	flasher->cleanup();
 	
 	return 0;
 }
-
-
-
-
-
-
-
