@@ -36,10 +36,12 @@ set(COMMON_SOURCES src/main.cpp src/myFTDI.cpp src/devices.cpp src/ihex.cpp src/
 	${PROJECT_PORT_DIR}/xcptransport.cpp ${PROJECT_PORT_DIR}/timeutil.cpp)
 
 if(WIN32)
-	add_executable(flasher.exe
+	set(TARGET_NAME flasher.exe)
+
+	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES})
 
-	target_link_libraries(flasher.exe
+	target_link_libraries(${TARGET_NAME}
 		ftdi1 usb-1.0)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")
@@ -57,20 +59,22 @@ if(WIN32)
 			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_SOURCE_DIR}/bin/)
 	endif()
 elseif(UNIX)
-	add_executable(flasher
+	set(TARGET_NAME flasher)
+
+	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES}
 		port/linux/ftdi.c port/linux/ftdi_stream.c)
 
-	target_link_libraries(flasher
+	target_link_libraries(${TARGET_NAME}
 		usb-1.0)
 endif()
 
 option(X86 "32 bit executable" OFF)
 
 if(X86)
-	set_target_properties(flasher PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+	set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
 endif()
 
 if(DEBUG)
-	set_target_properties(flasher PROPERTIES COMPILE_FLAGS "-g" LINK_FLAGS "-g")
+	set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "-g" LINK_FLAGS "-g")
 endif()
