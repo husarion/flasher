@@ -1,6 +1,9 @@
 #!/bin/bash -e
 
-BOOTLOADER_DIR=../robocore-bootloader
+if [ -z "$BOOTLOADER_DIR" ]; then
+	echo "No BOOTLOADER_DIR"
+	exit 1
+fi
 
 mkdir -p gen/
 OUT_FILE=gen/bootloaders.cpp
