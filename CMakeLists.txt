@@ -65,7 +65,11 @@ if(WIN32)
 			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_SOURCE_DIR}/bin/)
 	endif()
 elseif(UNIX)
-	set(TARGET_NAME flasher)
+	if(X86)
+		set(TARGET_NAME flasher_32)
+	else()
+		set(TARGET_NAME flasher)
+	endif()
 
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES}
