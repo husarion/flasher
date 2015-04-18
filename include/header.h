@@ -10,15 +10,12 @@ public:
 	uint8_t headerVersion, type;
 	uint32_t version, id;
 	uint8_t key[19];
+	uint16_t checksum;
 	
-	bool isClear()
-	{
-		uint8_t* ptr = (uint8_t*)this;
-		for (int i = 0; i < sizeof(TRoboCOREHeader); i++)
-			if (*ptr++ != 0xff)
-				return false;
-		return true;
-	}
+	bool isClear();
+	bool isValid();
+
+	void calcChecksum();
 };
 #pragma pack()
 

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "header.h"
 #include "timeutil.h"
 #include "Flasher.h"
 #include "HardFlasher.h"
@@ -285,6 +286,11 @@ int main(int argc, char** argv)
 					if (h.isClear())
 					{
 						printf("unable, device is unregistered, register it first.\r\n");
+						break;
+					}
+					else if (!h.isValid())
+					{
+						printf("header is invalid, unable to recognize device.\r\n");
 						break;
 					}
 					

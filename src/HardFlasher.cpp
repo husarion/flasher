@@ -409,17 +409,21 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 	const uint32_t OTP_BASE = OTP_START + 32 * 0;
 	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
 	
-	// memset(&header, 0, sizeof(header));
+	header.calcChecksum();
+	
 	writeMemory(OTP_BASE, &header, sizeof(header));
 	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
 	       header.headerVersion, header.type, header.version, header.id);
 	       
-	TRoboCOREHeader rbheader;
-	readMemory(OTP_BASE, &rbheader, sizeof(rbheader));
+	uint8_t data[sizeof(header)];
+	readMemory(OTP_BASE, data, sizeof(header));
 	
-	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
-	       rbheader.headerVersion, rbheader.type, rbheader.version, rbheader.id);
-	       
+	if (memcmp(data, &header, sizeof(header)) != 0)
+	{
+		printf("unable to register\r\n");
+		return -2;
+	}
+	
 	uint8_t d[] = { 0x00 };
 	writeMemory(OTP_LOCK, d, 1);
 }

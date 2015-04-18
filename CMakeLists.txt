@@ -32,7 +32,7 @@ endif()
 include_directories(${CURRENT_DIR}/include)
 
 set(COMMON_SOURCES src/main.cpp src/myFTDI.cpp src/devices.cpp src/ihex.cpp src/xcpmaster.cpp
-	src/HardFlasher.cpp src/Flasher.cpp src/SoftFlasher.cpp
+	src/HardFlasher.cpp src/Flasher.cpp src/SoftFlasher.cpp src/utils.cpp src/header.cpp
 	${PROJECT_PORT_DIR}/xcptransport.cpp ${PROJECT_PORT_DIR}/timeutil.cpp)
 
 if(EMBED_BOOTLOADERS)
