@@ -1,4 +1,4 @@
-!/bin/bash -e
+#!/bin/bash -e
 if [ ! -z "$BOOTLOADER_DIR" ]; then
 	export BOOTLOADER_DIR=$(readlink -f $BOOTLOADER_DIR)
 fi
