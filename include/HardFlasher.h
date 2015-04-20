@@ -5,7 +5,7 @@
 
 #include "devices.h"
 #include "myFTDI.h"
-#include "header.h"
+#include "TRoboCOREHeader.h"
 
 class HardFlasher : public Flasher
 {

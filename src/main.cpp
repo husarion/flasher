@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "header.h"
+#include "TRoboCOREHeader.h"
 #include "timeutil.h"
 #include "Flasher.h"
 #include "HardFlasher.h"
@@ -228,7 +228,7 @@ int main(int argc, char** argv)
 			{
 				printf("Registering...\r\n");
 				TRoboCOREHeader h;
-				h.headerVersion = 0x01;
+				h.headerVersion = 0x02;
 				h.type = 0x02;
 				h.version = 0x00090600;
 				h.id = regid;

@@ -11,7 +11,7 @@ using namespace std;
 
 #include "myFTDI.h"
 #include "timeutil.h"
-#include "header.h"
+#include "TRoboCOREHeader.h"
 
 #define ACK 0x79
 #define NACK 0x1f
@@ -426,6 +426,8 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 	
 	uint8_t d[] = { 0x00 };
 	writeMemory(OTP_LOCK, d, 1);
+
+	return 0;
 }
 
 // commands
@@ -705,7 +707,7 @@ void HardFlasher::dumpOptionBytes()
 		int a, b, c, d;
 		parseVersion(header.version, a, b, c, d);
 		
-		printf("Header version = 0x%02x\r\n", header.headerVersion);
+		printf("Header version = 0x%02x %s\r\n", header.headerVersion, header.isValid() ? "(CHECKSUM VALID)" : "(!! CHECKSUM INVALID !!)");
 		switch (header.type)
 		{
 		case 1:  printf("Type           = MINI\r\n"); break;
