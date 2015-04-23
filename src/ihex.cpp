@@ -31,6 +31,9 @@ THexFile::THexFile()
 }
 THexFile::~THexFile()
 {
+	for (unsigned int i = 0; i < parts.size(); i++)
+		delete parts[i];
+	parts.clear();
 }
 
 int THexFile::load(const std::string& path)
@@ -43,6 +46,11 @@ int THexFile::load(const std::string& path)
 	extAddr2 = 0;
 	extAddr4 = 0;
 	totalLength = 0;
+
+	for (unsigned int i = 0; i < parts.size(); i++)
+		delete parts[i];
+	parts.clear();
+	
 	// fseek(f, 0, SEEK_SET);
 	while (fgets(lineData, sizeof(lineData), f) != NULL)
 	{
@@ -58,6 +66,10 @@ int THexFile::loadData(const char* data)
 	extAddr2 = 0;
 	extAddr4 = 0;
 	totalLength = 0;
+	
+	for (unsigned int i = 0; i < parts.size(); i++)
+		delete parts[i];
+	parts.clear();
 	
 	char del[2] = "\n";
 	
