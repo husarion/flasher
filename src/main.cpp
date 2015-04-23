@@ -303,7 +303,6 @@ int main(int argc, char** argv)
 					res = flasher->setup();
 					if (res != 0)
 					{
-						printf("\n");
 						continue;
 					}
 				}
@@ -400,7 +399,6 @@ int main(int argc, char** argv)
 					res = flasher->setup();
 					if (res != 0)
 					{
-						printf("\n");
 						continue;
 					}
 						
@@ -408,7 +406,6 @@ int main(int argc, char** argv)
 					res = flasher->unprotect();
 					if (res != 0)
 					{
-						printf("\n");
 						continue;
 					}
 					
