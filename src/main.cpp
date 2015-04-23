@@ -13,6 +13,7 @@
 #include "Flasher.h"
 #include "HardFlasher.h"
 #include "SoftFlasher.h"
+#include "utils.h"
 
 #ifdef EMBED_BOOTLOADERS
 #include "bootloaders.h"
@@ -24,6 +25,7 @@ using namespace std;
 int doHelp = 0;
 int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0;
+int regType = -1;
 
 #define BEGIN_CHECK_USAGE() do {
 #define END_CHECK_USAGE() usage(argv); return 1; } while (0);
@@ -90,7 +92,8 @@ int main(int argc, char** argv)
 	int speed = 460800;
 	const char* device = 0;
 	int res;
-	int regid;
+	int regId = -1;
+	uint32_t regVer = 0xffffffff;
 	
 	setvbuf(stdout, NULL, _IONBF, 0);
 	
@@ -108,7 +111,12 @@ int main(int argc, char** argv)
 		{ "protect",  no_argument,    &doProtect, 1 },
 		{ "dump",  no_argument,    &doDump, 1 },
 		{ "setup",  no_argument,    &doSetup, 1 },
-		{ "register",  required_argument,    0, 'r' },
+		{ "register",  no_argument,    &doRegister, 1 },
+		
+		{ "id",  required_argument,    0, 'i' },
+		{ "version",  required_argument,    0, 'v' },
+		{ "big",  no_argument,    &regType, 2 },
+		{ "pro",  no_argument,    &regType, 3 },
 		
 		{ "device", required_argument, 0, 'd' },
 		{ "speed",  required_argument, 0, 's' },
@@ -137,10 +145,51 @@ int main(int argc, char** argv)
 			if (speed == 0)
 				speed = 460800;
 			break;
-		case 'r':
-			regid = atoi(optarg);
-			doRegister = 1;
+		case 'i':
+			regId = atoi(optarg);
+			if (regId < 0)
+			{
+				printf("inavlid id\r\n");
+				exit(1);
+			}
 			break;
+		case 'v':
+		{
+			vector<string> parts = splitString(optarg, ".");
+			int a, b, c, d;
+			if (parts.size() == 3)
+			{
+				a = atoi(parts[0].c_str());
+				b = atoi(parts[1].c_str());
+				c = atoi(parts[2].c_str());
+				d = 0;
+			}
+			else if (parts.size() == 4)
+			{
+				a = atoi(parts[0].c_str());
+				b = atoi(parts[1].c_str());
+				c = atoi(parts[2].c_str());
+				d = atoi(parts[3].c_str());
+			}
+			else
+			{
+				printf("invalid version\r\n");
+				exit(1);
+			}
+			if (a < 0 || b < 0 || c < 0 || d < 0)
+			{
+				printf("invalid version\r\n");
+				exit(1);
+			}
+			if (a + b + c + d == 0)
+			{
+				printf("invalid version\r\n");
+				exit(1);
+			}
+			
+			makeVersion(regVer, a, b, c, d);
+		}
+		break;
 		}
 	}
 	
@@ -155,13 +204,13 @@ int main(int argc, char** argv)
 	const char* filePath = 0;
 	if (optind < argc)
 		filePath = argv[optind];
-		
+
 	BEGIN_CHECK_USAGE();
 	CHECK_USAGE(doHard && doFlash && filePath);
 	CHECK_USAGE(doHard && doProtect);
 	CHECK_USAGE(doHard && doUnprotect);
 	CHECK_USAGE(doHard && doDump);
-	CHECK_USAGE(doHard && doRegister);
+	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
 	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doHard && doFlashBootloader);
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
@@ -226,22 +275,39 @@ int main(int argc, char** argv)
 			}
 			else if (doRegister)
 			{
+				HardFlasher *hf = (HardFlasher*)flasher;
+				
+				TRoboCOREHeader oldHeader;
+				hf->readHeader(oldHeader);
+				
+				if (!oldHeader.isClear())
+				{
+					printf("Already registered\r\n");
+					break;
+				}
+				
 				printf("Registering...\r\n");
 				TRoboCOREHeader h;
 				h.headerVersion = 0x02;
-				h.type = 0x02;
-				h.version = 0x00090600;
-				h.id = regid;
+				h.type = regType;
+				h.version = regVer;
+				h.id = regId;
 				h.key[0] = 0x00;
-				HardFlasher *hf = (HardFlasher*)flasher;
 				res = hf->writeHeader(h);
 			}
 			else if (doFlash)
 			{
-				printf("Checking configuration... ");
-				if (flasher->setup())
-					return -1;
-					
+				if (doHard)
+				{
+					printf("Checking configuration... ");
+					res = flasher->setup();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+				}
+				
 				printf("Erasing device... ");
 				res = flasher->erase();
 				if (res != 0)
@@ -302,6 +368,7 @@ int main(int argc, char** argv)
 					{
 					case 1: sprintf(buf, "bootloader_%d_%d_%d_mini", a, b, c); break;
 					case 2: sprintf(buf, "bootloader_%d_%d_%d_big", a, b, c); break;
+					case 3: sprintf(buf, "bootloader_%d_%d_%d_pro", a, b, c); break;
 					default:
 						printf("Unsupported version\r\n");
 						break;
@@ -330,8 +397,12 @@ int main(int argc, char** argv)
 					flasher->loadData(ptr->data);
 					
 					printf("Checking configuration... ");
-					if (flasher->setup())
-						return -1;
+					res = flasher->setup();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
 						
 					printf("Unprotecting bootloader... ");
 					res = flasher->unprotect();

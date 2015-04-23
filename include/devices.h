@@ -40,5 +40,6 @@ const uint32_t OTP_START = 0x1fff7800;
 const uint32_t OTP_LOCK_START = 0x1fff7a00;
 
 void parseVersion(uint32_t version, int& a, int& b, int& c, int& d);
+void makeVersion(uint32_t& version, int a, int b, int c, int d);
 
 #endif

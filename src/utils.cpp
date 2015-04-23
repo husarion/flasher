@@ -20,3 +20,38 @@ uint16_t crc16_calc(uint8_t* data, int len)
 	
 	return crc;
 }
+vector<string> splitString(const string& str, const string& delim, size_t maxCount, size_t start)
+{
+	vector<std::string> parts;
+	size_t idx = start, delimIdx;
+	
+	delimIdx = str.find(delim, idx);
+	if (delimIdx == string::npos)
+	{
+		parts.push_back(str);
+		return parts;
+	}
+	do
+	{
+		if (parts.size() == maxCount - 1)
+		{
+			string part = str.substr(idx);
+			parts.push_back(part);
+			idx = str.size();
+			break;
+		}
+		string part = str.substr(idx, delimIdx - idx);
+		parts.push_back(part);
+		idx = delimIdx + delim.size();
+		delimIdx = str.find(delim, idx);
+	}
+	while (delimIdx != string::npos && idx < str.size());
+	
+	if (idx < str.size())
+	{
+		string part = str.substr(idx);
+		parts.push_back(part);
+	}
+	
+	return parts;
+}

@@ -203,7 +203,6 @@ int HardFlasher::erase()
 		}
 		
 		int pagesToEraseCnt = pages.size();
-		// printf("Pages to erase: ", pagesToEraseCnt);
 		
 		uint8_t data[2 + pagesToEraseCnt * 2];
 		data[0] = (pagesToEraseCnt - 1) >> 8;
@@ -217,7 +216,6 @@ int HardFlasher::erase()
 			data[2 + idx * 2 + 1] = pageNr & 0xff;
 			idx++;
 		}
-		// printf("\n");
 		
 		uart_write_data_checksum(data, sizeof(data));
 		
@@ -391,6 +389,7 @@ int HardFlasher::setup()
 		if (writeMemory(OPTION_BYTE_1, &op1, 2))
 			return -1;
 		printf("CHANGED\r\n");
+		return -1;
 	}
 	else
 	{
