@@ -315,7 +315,7 @@ int HardFlasher::protect()
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR\n");
+		printf("ERROR(1)\n");
 		return -1;
 	}
 	uint8_t data[1 + pagesToProtect.size()];
@@ -330,7 +330,7 @@ int HardFlasher::protect()
 	res = uart_read_ack_nack(1000);
 	if (res != ACK)
 	{
-		printf("ERROR\n");
+		printf("ERROR(2)\n");
 		return -1;
 	}
 	printf("OK\n");
@@ -345,21 +345,18 @@ int HardFlasher::unprotect()
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("Write Unprotect command first NACK'ed\n");
+		printf("ERROR(1)\n");
 		return -1;
 	}
 	
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("Write Unprotect command second NACK'ed\n");
+		printf("ERROR(2)\n");
 		return -1;
 	}
 	
-	printf("Write Unprotect succeed\n");
-	
-	// usleep(1000 * 1000);
-	
+	printf("OK\n");
 	return 0;
 }
 int HardFlasher::dump()
