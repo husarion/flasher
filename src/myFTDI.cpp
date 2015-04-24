@@ -55,8 +55,11 @@ bool uart_open(int speed, bool showErrors)
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
-	int r =ftdi_set_baudrate(ftdi, speed);
-	printf("%d\r\n", r);
+#ifdef WIN32
+	ftdi_set_baudrate(ftdi, speed * 4);
+#else
+	ftdi_set_baudrate(ftdi, speed);
+#endif
 	
 	return ftdi;
 }
@@ -91,7 +94,11 @@ int uart_reset()
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
+#ifdef WIN32
+	ftdi_set_baudrate(ftdi, speed * 4);
+#else
 	ftdi_set_baudrate(ftdi, speed);
+#endif
 }
 bool uart_isOpened()
 {
@@ -152,7 +159,11 @@ void uart_reset_normal()
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
+#ifdef WIN32
+	ftdi_set_baudrate(ftdi, speed * 4);
+#else
 	ftdi_set_baudrate(ftdi, speed);
+#endif
 }
 void uart_close()
 {
