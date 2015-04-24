@@ -15,46 +15,58 @@
 
 uint32_t getTicks();
 
-uint8_t vals;
-int speed;
-int setPin(ftdi_context* ftdi, int pin, int value)
+static uint8_t vals;
+static int speed;
+static ftdi_context* ftdi;
+
+int setPin(int pin, int value)
 {
 	vals &= ~(1 << pin);
 	vals |= (1 << (pin + 4)) | (value << pin);
 	return ftdi_set_bitmode(ftdi, vals, BITMODE_CBUS);
 }
 
-SerialHandle uart_open(int speed, bool showErrors)
+bool uart_open(int speed, bool showErrors)
 {
-	ftdi_context *ftdi = ftdi_new();
 	int ret;
+	
+	if (ftdi)
+	{
+		uart_close();
+	}
+	ftdi = ftdi_new();
 	
 	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
 	{
 		if (showErrors)
 			fprintf(stderr, "unable to open ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
 		ftdi_free(ftdi);
+		ftdi = 0;
 		return 0;
 	}
-
+	
 	ftdi->usb_read_timeout = 1000;
 	ftdi->usb_write_timeout = 1000;
 	libusb_set_auto_detach_kernel_driver(ftdi->usb_dev, 1);
 	ftdi_read_data_set_chunksize(ftdi, 4096);
 	::speed = speed;
 	
+	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, NONE);
+	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
+	
+	ftdi_disable_bitbang(ftdi);
+	ftdi_set_baudrate(ftdi, speed);
+	
 	return ftdi;
 }
-int uart_check_gpio(SerialHandle handle)
+int uart_check_gpio()
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
 	int r;
 	r = ftdi_read_eeprom(ftdi);
 	ftdi_eeprom_decode(ftdi, 0);
 	int p1 = ftdi->eeprom->cbus_function[0];
 	int p2 = ftdi->eeprom->cbus_function[1];
 	const int IOMODE = 8;
-	// const int IOMODE = 9;
 	if (p1 != IOMODE || p2 != IOMODE)
 	{
 		ftdi->eeprom->cbus_function[0] = IOMODE;
@@ -65,14 +77,13 @@ int uart_check_gpio(SerialHandle handle)
 	}
 	return 0;
 }
-int uart_reset(SerialHandle handle)
+int uart_reset()
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
-	setPin(ftdi, BOOT0, 1);
+	setPin(BOOT0, 1);
 	usleep(10000);
-	setPin(ftdi, RST, 1);
+	setPin(RST, 1);
 	usleep(100000);
-	setPin(ftdi, RST, 0);
+	setPin(RST, 0);
 	usleep(100000);
 	
 	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, EVEN);
@@ -81,9 +92,12 @@ int uart_reset(SerialHandle handle)
 	ftdi_disable_bitbang(ftdi);
 	ftdi_set_baudrate(ftdi, speed);
 }
-int uart_tx(SerialHandle handle, const void* data, int len)
+bool uart_isOpened()
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
+	return ftdi != 0;
+}
+int uart_tx(const void* data, int len)
+{
 	uint8_t* _data = (uint8_t*)data;
 	while (len)
 	{
@@ -95,11 +109,19 @@ int uart_tx(SerialHandle handle, const void* data, int len)
 	}
 	return 0;
 }
-int uart_rx(SerialHandle handle, void* data, int len, uint32_t timeout_ms)
+int uart_rx_any(void* data, int len)
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
 	uint8_t* _data = (uint8_t*)data;
-	int l = len;
+	
+	int rread = ftdi_read_data(ftdi, _data, len);
+	if (rread < 0)
+		return -1;
+		
+	return rread;
+}
+int uart_rx(void* data, int len, uint32_t timeout_ms)
+{
+	uint8_t* _data = (uint8_t*)data;
 	int r = 0;
 	uint32_t start = getTicks();
 	
@@ -115,27 +137,34 @@ int uart_rx(SerialHandle handle, void* data, int len, uint32_t timeout_ms)
 	}
 	return r;
 }
-void uart_reset_normal(SerialHandle handle)
+void uart_reset_normal()
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
 	int ret;
 	
-	setPin(ftdi, BOOT0, 0);
+	setPin(BOOT0, 0);
 	usleep(10000);
-	setPin(ftdi, RST, 1);
+	setPin(RST, 1);
 	usleep(100000);
-	setPin(ftdi, RST, 0);
+	setPin(RST, 0);
+	
+	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, NONE);
+	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
+	ftdi_set_baudrate(ftdi, speed);
 }
-void uart_close(SerialHandle handle)
+void uart_close()
 {
-	ftdi_context *ftdi = (ftdi_context*)handle;
 	int ret;
 	
-	libusb_attach_kernel_driver(ftdi->usb_dev, ftdi->interface);
+	if (!ftdi)
+		return;
+		
+	// libusb_attach_kernel_driver(ftdi->usb_dev, ftdi->interface);
 	if ((ret = ftdi_usb_close(ftdi)) < 0)
 		fprintf(stderr, "unable to close ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
 		
 	ftdi_free(ftdi);
+	
+	ftdi = 0;
 }

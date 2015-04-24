@@ -26,22 +26,20 @@ uint32_t SWAP32(uint32_t v)
 
 int HardFlasher::init()
 {
-	m_serial = 0;
 	return 0;
 }
 int HardFlasher::open()
 {
 	close();
-	m_serial = uart_open(m_baudrate, false);
-	if (m_serial)
+	bool res = uart_open(m_baudrate, false);
+	if (res)
 	{
 		printf(" OK\r\n");
 		printf("Checking settings... ");
-		int r = uart_check_gpio(m_serial);
+		int r = uart_check_gpio();
 		if (r)
 		{
-			uart_close(m_serial);
-			m_serial = 0;
+			uart_close();
 			printf(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
 			printf("Unplug RoboCORE.");
 			bool restarted = false;
@@ -49,22 +47,21 @@ int HardFlasher::open()
 			{
 				if (!restarted)
 				{
-					m_serial = uart_open(m_baudrate, false);
-					if (m_serial == 0)
+				res = uart_open(m_baudrate, false);
+					if (!res)
 					{
 						restarted = true;
 						printf(" OK, plug it again.");
 					}
 					else
 					{
-						uart_close(m_serial);
-						m_serial = 0;
+						uart_close();
 					}
 				}
 				else
 				{
-					m_serial = uart_open(m_baudrate, false);
-					if (m_serial)
+					res = uart_open(m_baudrate, false);
+					if (res)
 						break;
 				}
 				TimeUtilDelayMs(10);
@@ -90,11 +87,10 @@ int HardFlasher::open()
 }
 int HardFlasher::close()
 {
-	if (m_serial)
+	if (uart_isOpened())
 	{
-		uart_reset_normal(m_serial);
-		uart_close(m_serial);
-		m_serial = 0;
+		uart_reset_normal();
+		uart_close();
 	}
 	return 0;
 }
@@ -128,13 +124,13 @@ int HardFlasher::start()
 	printf("Connecting to bootloader..");
 	for (;;)
 	{
-		if (uart_reset(m_serial))
+		if (uart_reset())
 		{
 			printf(" failed\r\n");
 			return -1;
 		}
 		
-		if (uart_tx(m_serial, "\x7f", 1) == -1)
+		if (uart_tx("\x7f", 1) == -1)
 		{
 			printf(" failed\r\n");
 			return -1;
@@ -719,27 +715,27 @@ void HardFlasher::dumpOptionBytes()
 int HardFlasher::uart_send_cmd(uint8_t cmd)
 {
 	uint8_t buf[] = { cmd, (uint8_t)~cmd };
-	return uart_tx(m_serial, buf, 2);
+	return uart_tx(buf, 2);
 }
 
 int HardFlasher::uart_read_ack_nack()
 {
 	char buf[1];
-	int r = uart_rx(m_serial, buf, 1, TIMEOUT);
+	int r = uart_rx(buf, 1, TIMEOUT);
 	if (r == -1) return -1;
 	return buf[0];
 }
 int HardFlasher::uart_read_ack_nack(int timeout)
 {
 	char buf[1];
-	int r = uart_rx(m_serial, buf, 1, timeout);
+	int r = uart_rx(buf, 1, timeout);
 	if (r == -1) return -1;
 	return buf[0];
 }
 int HardFlasher::uart_read_ack_nack_fast()
 {
 	char buf[1];
-	int r = uart_rx(m_serial, buf, 1, 100);
+	int r = uart_rx(buf, 1, 100);
 	if (r == -1) return -1;
 	return buf[0];
 }
@@ -747,13 +743,13 @@ int HardFlasher::uart_read_ack_nack_fast()
 int HardFlasher::uart_read_byte()
 {
 	char b;
-	int r = uart_rx(m_serial, &b, 1, TIMEOUT);
+	int r = uart_rx(&b, 1, TIMEOUT);
 	return r == -1 ? -1 : b;
 }
 int HardFlasher::uart_read_data(void* data, int len)
 {
 	uint8_t* _data = (uint8_t*)data;
-	int r = uart_rx(m_serial, _data, len, TIMEOUT * len);
+	int r = uart_rx(_data, len, TIMEOUT * len);
 	return r == -1 ? -1 : r;
 }
 
@@ -763,19 +759,19 @@ int HardFlasher::uart_write_data_checksum(const void* data, int len)
 	char chk = _data[0];
 	for (int i = 1; i < len; i++)
 		chk ^= _data[i];
-	int w = uart_tx(m_serial, _data, len);
+	int w = uart_tx(_data, len);
 	if (w == -1) return -1;
-	w = uart_tx(m_serial, &chk, 1);
+	w = uart_tx(&chk, 1);
 	return w == -1 ? -1 : len;
 }
 int HardFlasher::uart_write_data(const void* data, int len)
 {
 	const uint8_t* _data = (uint8_t*)data;
-	int w = uart_tx(m_serial, _data, len);
+	int w = uart_tx(_data, len);
 	return w == -1 ? -1 : len;
 }
 int HardFlasher::uart_write_byte(char data)
 {
-	int w = uart_tx(m_serial, &data, 1);
+	int w = uart_tx(&data, 1);
 	return w == -1 ? -1 : 1;
 }

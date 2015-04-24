@@ -27,7 +27,6 @@ public:
 	
 private:
 	stm32_dev_t m_dev;
-	SerialHandle m_serial;
 	
 	int open();
 	int close();

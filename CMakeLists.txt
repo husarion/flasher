@@ -33,6 +33,7 @@ include_directories(${CURRENT_DIR}/include)
 
 set(COMMON_SOURCES src/main.cpp src/myFTDI.cpp src/devices.cpp src/ihex.cpp src/xcpmaster.cpp
 	src/HardFlasher.cpp src/Flasher.cpp src/SoftFlasher.cpp src/utils.cpp src/TRoboCOREHeader.cpp
+	src/console.cpp
 	${PROJECT_PORT_DIR}/xcptransport.cpp ${PROJECT_PORT_DIR}/timeutil.cpp)
 
 if(EMBED_BOOTLOADERS)
@@ -76,7 +77,7 @@ elseif(UNIX)
 		port/linux/ftdi.c port/linux/ftdi_stream.c)
 
 	target_link_libraries(${TARGET_NAME}
-		usb-1.0)
+		usb-1.0 pthread)
 endif()
 
 option(X86 "32 bit executable" OFF)
