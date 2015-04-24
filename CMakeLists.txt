@@ -43,7 +43,11 @@ if(EMBED_BOOTLOADERS)
 endif()
 
 if(WIN32)
-	set(TARGET_NAME flasher)
+	if(CROSS)
+		set(TARGET_NAME flasher.exe)
+	else()
+		set(TARGET_NAME flasher)
+	endif()
 
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES})
