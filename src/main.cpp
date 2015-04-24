@@ -62,6 +62,8 @@ void usage(char** argv)
 	fprintf(stderr, "  %s <other options>\n", argv[0]);
 	fprintf(stderr, "\r\n");
 	fprintf(stderr, "other options:\r\n");
+	fprintf(stderr, "       --help, --usage  prints this message\n");
+	fprintf(stderr, "       --test           tests connection to RoboCORE\n");
 	fprintf(stderr, "       --setup          setup option bits\n");
 	fprintf(stderr, "       --protect        protects bootloader against\n");
 	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
@@ -147,12 +149,15 @@ int main(int argc, char** argv)
 	{
 		int option_index = 0;
 		char *p;
-		int c = getopt_long(argc, argv, "s:d:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "hs:d:", long_options, &option_index);
 		if (c == -1)
 			break;
 			
 		switch (c)
 		{
+		case 'h':
+			doHelp = 1;
+			break;
 		case 'd':
 			device = optarg;
 			break;
