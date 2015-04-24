@@ -43,13 +43,13 @@ if(EMBED_BOOTLOADERS)
 endif()
 
 if(WIN32)
-	set(TARGET_NAME flasher.exe)
+	set(TARGET_NAME flasher)
 
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES})
 
 	target_link_libraries(${TARGET_NAME}
-		ftdi1 usb-1.0)
+		ftdi1 usb-1.0 pthread)
 	
 	add_definitions(-DWIN32)
 
