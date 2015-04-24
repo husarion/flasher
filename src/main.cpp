@@ -24,12 +24,12 @@ using namespace std;
 
 int doHelp = 0;
 int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
-    doDump = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0;
+    doDump = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0, doTest = 0;
 int regType = -1;
 
-#define BEGIN_CHECK_USAGE() do {
-#define END_CHECK_USAGE() usage(argv); return 1; } while (0);
-#define CHECK_USAGE(x) if(x) break;
+#define BEGIN_CHECK_USAGE() int found = 0; do {
+#define END_CHECK_USAGE() if (found != 1) { if (found > 1) warn1(); else warn2(); usage(argv); return 1; } } while (0);
+#define CHECK_USAGE(x) if(x) { found++; }
 
 uint32_t getTicks()
 {
@@ -39,11 +39,27 @@ uint32_t getTicks()
 	return val;
 }
 
+void warn1()
+{
+	printf("only one action is allowed\r\n\r\n");
+}
+void warn2()
+{
+	printf("invalid action\r\n\r\n");
+}
 void usage(char** argv)
 {
-	fprintf(stderr, "Usage: %s [--hard] [--speed speed] file.hex\n", argv[0]);
-	fprintf(stderr, "       %s --soft --device /dev/ttyUSB0 file.hex\n", argv[0]);
-	fprintf(stderr, "       %s <other options>\n", argv[0]);
+	fprintf(stderr, "Usage:\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Flashing RoboCORE:\n");
+	fprintf(stderr, "  %s [--hard] [--speed speed] file.hex\n", argv[0]);
+	fprintf(stderr, "  %s --soft --device /dev/ttyUSB0 file.hex\n", argv[0]);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Flashing bootloader:\n");
+	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Other commands:\n");
+	fprintf(stderr, "  %s <other options>\n", argv[0]);
 	fprintf(stderr, "\r\n");
 	fprintf(stderr, "other options:\r\n");
 	fprintf(stderr, "       --setup          setup option bits\n");
@@ -60,7 +76,7 @@ void callback(uint32_t cur, uint32_t total)
 	int ratio = cur * width / total;
 	int id = cur / 2000;
 	
-	if (cur == -1)
+	if (cur == (uint32_t)-1)
 	{
 		printf("\rProgramming device... ");
 		int toClear = width + 25;
@@ -99,30 +115,30 @@ int main(int argc, char** argv)
 	
 	static struct option long_options[] =
 	{
-		{ "soft",  no_argument,       &doSoft, 1 },
-		{ "hard",  no_argument,       &doHard, 1 },
+		{ "soft",       no_argument,       &doSoft,   1 },
+		{ "hard",       no_argument,       &doHard,   1 },
 		
-		{ "test",  no_argument,  &doUnprotect, 1 },
-		{ "flash",  no_argument,  &doFlash, 1 },
+		{ "test",       no_argument,       &doTest ,  1 },
+		{ "flash",      no_argument,       &doFlash,  1 },
 #ifdef EMBED_BOOTLOADERS
-		{ "flash-bootloader",  no_argument,    &doFlashBootloader, 1 },
+		{ "flash-bootloader", no_argument, &doFlashBootloader, 1 },
 #endif
-		{ "unprotect",  no_argument,  &doUnprotect, 1 },
-		{ "protect",  no_argument,    &doProtect, 1 },
-		{ "dump",  no_argument,    &doDump, 1 },
-		{ "setup",  no_argument,    &doSetup, 1 },
-		{ "register",  no_argument,    &doRegister, 1 },
+		{ "unprotect",  no_argument,       &doUnprotect, 1 },
+		{ "protect",    no_argument,       &doProtect,   1 },
+		{ "dump",       no_argument,       &doDump,      1 },
+		{ "setup",      no_argument,       &doSetup,     1 },
+		{ "register",   no_argument,       &doRegister,  1 },
 		
-		{ "id",  required_argument,    0, 'i' },
-		{ "version",  required_argument,    0, 'v' },
-		{ "big",  no_argument,    &regType, 2 },
-		{ "pro",  no_argument,    &regType, 3 },
+		{ "id",         required_argument, 0,       'i' },
+		{ "version",    required_argument, 0,       'v' },
+		{ "big",        no_argument,       &regType,  2 },
+		{ "pro",        no_argument,       &regType,  3 },
 		
-		{ "device", required_argument, 0, 'd' },
-		{ "speed",  required_argument, 0, 's' },
+		{ "device",     required_argument, 0,       'd' },
+		{ "speed",      required_argument, 0,       's' },
 		
-		{ "usage",  no_argument,    &doHelp, 1 },
-		{ "help",  no_argument,    &doHelp, 1 },
+		{ "usage",      no_argument,       &doHelp,   1 },
+		{ "help",       no_argument,       &doHelp,   1 },
 		
 		{ 0, 0, 0, 0 }
 	};
@@ -194,9 +210,16 @@ int main(int argc, char** argv)
 	}
 	
 	doHard = !doSoft;
-	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister && !doSetup && !doFlashBootloader;
-	if (doHelp || doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup + doFlashBootloader > 1)
+	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister &&
+		!doSetup && !doFlashBootloader && !doTest;
+	if (doHelp)
 	{
+		usage(argv);
+		return 1;
+	}
+	if (doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup + doFlashBootloader + doTest > 1)
+	{
+		warn1();
 		usage(argv);
 		return 1;
 	}
@@ -206,6 +229,7 @@ int main(int argc, char** argv)
 		filePath = argv[optind];
 
 	BEGIN_CHECK_USAGE();
+	CHECK_USAGE(doHard && doTest);
 	CHECK_USAGE(doHard && doFlash && filePath);
 	CHECK_USAGE(doHard && doProtect);
 	CHECK_USAGE(doHard && doUnprotect);
