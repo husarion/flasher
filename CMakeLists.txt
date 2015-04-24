@@ -50,6 +50,8 @@ if(WIN32)
 
 	target_link_libraries(${TARGET_NAME}
 		ftdi1 usb-1.0)
+	
+	add_definitions(-DWIN32)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")
 	add_custom_command(TARGET copy
@@ -71,6 +73,7 @@ elseif(UNIX)
 	else()
 		set(TARGET_NAME flasher)
 	endif()
+	add_definitions(-DUNIX)
 
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES}

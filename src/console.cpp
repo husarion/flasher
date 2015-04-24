@@ -3,19 +3,33 @@
 #include <stdio.h>
 #include "myFTDI.h"
 
+#ifdef UNIX
 #include <termios.h>
+#elif WIN32
+#include <windows.h>
+#endif
+
 #include <pthread.h>
 
 int mygetch()
 {
-	struct termios oldt, newt;
 	int ch;
+#ifdef UNIX
+	struct termios oldt, newt;
 	tcgetattr(fileno(stdin), &oldt);
 	newt = oldt;
 	newt.c_lflag &= ~(ICANON | ECHO);
 	tcsetattr(fileno(stdin), TCSANOW, &newt);
 	ch = getchar();
 	tcsetattr(fileno(stdin), TCSANOW, &oldt);
+#elif WIN32
+	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+	DWORD mode = 0;
+	GetConsoleMode(hStdin, &mode);
+	SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
+	ch = getchar();
+	SetConsoleMode(hStdin, mode | ENABLE_ECHO_INPUT);
+#endif
 	return ch;
 }
 
@@ -32,7 +46,9 @@ void* thread(void*)
 void openConsole(int speed)
 {
 	bool res = uart_open(speed, true);
-	
+	if (!res)
+		return;
+		
 	pthread_t t;
 	pthread_create(&t, 0, thread, 0);
 	

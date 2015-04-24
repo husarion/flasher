@@ -17,7 +17,7 @@ uint32_t getTicks();
 
 static uint8_t vals;
 static int speed;
-static ftdi_context* ftdi;
+static ftdi_context* ftdi = 0;
 
 int setPin(int pin, int value)
 {
@@ -55,7 +55,8 @@ bool uart_open(int speed, bool showErrors)
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
 	
 	ftdi_disable_bitbang(ftdi);
-	ftdi_set_baudrate(ftdi, speed);
+	int r =ftdi_set_baudrate(ftdi, speed);
+	printf("%d\r\n", r);
 	
 	return ftdi;
 }
