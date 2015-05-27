@@ -54,9 +54,9 @@ void thread()
 
 		if (res > 0)
 		{
-			char ch;
-			read(fileno(stdin), &ch, 1);
-			uart_tx(&ch, 1);
+			char data[100];
+			int r = read(fileno(stdin), data, 100);
+			uart_tx(data, r);
 		}
 	}
 
