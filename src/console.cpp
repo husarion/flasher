@@ -35,8 +35,6 @@ void thread()
 	DWORD mode = 0;
 	GetConsoleMode(hStdin, &mode);
 	SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
-	ch = getchar();
-	SetConsoleMode(hStdin, mode | ENABLE_ECHO_INPUT);
 #endif
 
 	while (!stop)
@@ -62,6 +60,8 @@ void thread()
 
 #ifdef UNIX
 	tcsetattr(fileno(stdin), TCSANOW, &oldt);
+#elif WIN32
+	SetConsoleMode(hStdin, mode | ENABLE_ECHO_INPUT);
 #endif
 }
 
