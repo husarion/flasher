@@ -53,7 +53,7 @@ if(WIN32)
 		${COMMON_SOURCES})
 
 	target_link_libraries(${TARGET_NAME}
-		ftdi1 usb-1.0 pthread)
+		ftdi1 usb-1.0 pthread ws2_32)
 	
 	add_definitions(-DWIN32)
 
