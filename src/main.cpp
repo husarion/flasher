@@ -109,7 +109,7 @@ void callback(uint32_t cur, uint32_t total)
 	fflush(stdout);
 }
 
-void sigHandler(int)
+static void sigHandler(int)
 {
 	uart_close();
 	exit(0);
@@ -523,7 +523,7 @@ int main(int argc, char** argv)
 		int s = speed;
 		if (s == -1)
 			s = 230400;
-		openConsole(s);
+		return runConsole(s);
 	}
 	
 	return 0;

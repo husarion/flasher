@@ -5,8 +5,8 @@
 
 bool uart_open(int speed, bool showErrors = true);
 int uart_check_gpio();
-int uart_reset();
-bool uart_isOpened();
+int uart_reset_boot();
+bool uart_is_opened();
 void uart_reset_normal();
 void uart_setspeed(int speed);
 int uart_tx(const void* data, int len);

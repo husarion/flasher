@@ -47,7 +47,7 @@ int HardFlasher::open()
 			{
 				if (!restarted)
 				{
-				res = uart_open(m_baudrate, false);
+					res = uart_open(m_baudrate, false);
 					if (!res)
 					{
 						restarted = true;
@@ -87,7 +87,7 @@ int HardFlasher::open()
 }
 int HardFlasher::close()
 {
-	if (uart_isOpened())
+	if (uart_is_opened())
 	{
 		uart_reset_normal();
 		uart_close();
@@ -97,16 +97,16 @@ int HardFlasher::close()
 
 int HardFlasher::start()
 {
-	int lastMsg = -1;
 	printf("Connecting to RoboCORE...");
 	
 	for (;;)
 	{
 		if (open())
 		{
-			if (lastMsg == -1)
+			static bool plugInMsgShown = false;
+			if (!plugInMsgShown)
 			{
-				lastMsg = 0;
+				plugInMsgShown = true;
 				printf(" plug in RoboCORE..");
 			}
 			else
@@ -124,7 +124,7 @@ int HardFlasher::start()
 	printf("Connecting to bootloader..");
 	for (;;)
 	{
-		if (uart_reset())
+		if (uart_reset_boot())
 		{
 			printf(" failed\r\n");
 			return -1;

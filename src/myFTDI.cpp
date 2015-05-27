@@ -81,7 +81,7 @@ int uart_check_gpio()
 	}
 	return 0;
 }
-int uart_reset()
+int uart_reset_boot()
 {
 	setPin(BOOT0, 1);
 	usleep(10000);
@@ -100,7 +100,7 @@ int uart_reset()
 	ftdi_set_baudrate(ftdi, speed);
 #endif
 }
-bool uart_isOpened()
+bool uart_is_opened()
 {
 	return ftdi != 0;
 }

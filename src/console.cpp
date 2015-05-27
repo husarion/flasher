@@ -2,26 +2,34 @@
 
 #include <stdio.h>
 #include "myFTDI.h"
+#include <unistd.h>
+#include <thread>
 
 #ifdef UNIX
 #include <termios.h>
+#include <signal.h>
 #elif WIN32
 #include <windows.h>
 #endif
 
 #include <pthread.h>
 
-int mygetch()
+static bool stop = false;
+
+void sigHandler(int num)
 {
-	int ch;
+	stop = true;
+}
+
+#include <sys/time.h>
+void thread()
+{
 #ifdef UNIX
 	struct termios oldt, newt;
 	tcgetattr(fileno(stdin), &oldt);
 	newt = oldt;
 	newt.c_lflag &= ~(ICANON | ECHO);
 	tcsetattr(fileno(stdin), TCSANOW, &newt);
-	ch = getchar();
-	tcsetattr(fileno(stdin), TCSANOW, &oldt);
 #elif WIN32
 	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	DWORD mode = 0;
@@ -30,29 +38,44 @@ int mygetch()
 	ch = getchar();
 	SetConsoleMode(hStdin, mode | ENABLE_ECHO_INPUT);
 #endif
-	return ch;
-}
 
-void* thread(void*)
-{
-	for (;;)
+	while (!stop)
 	{
-		int c = mygetch();
-		char cc = (char)(c & 0xff);
-		int res = uart_tx(&cc, 1);
+		fd_set set;
+		struct timeval tv;
+
+		tv.tv_sec = 0;
+		tv.tv_usec = 10 * 1000;
+
+		FD_ZERO(&set);
+		FD_SET(fileno(stdin), &set);
+
+		int res = select(fileno(stdin) + 1, &set, NULL, NULL, &tv);
+
+		if (res > 0)
+		{
+			char ch;
+			read(fileno(stdin), &ch, 1);
+			uart_tx(&ch, 1);
+		}
 	}
+
+#ifdef UNIX
+	tcsetattr(fileno(stdin), TCSANOW, &oldt);
+#endif
 }
 
-void openConsole(int speed)
+int runConsole(int speed)
 {
 	bool res = uart_open(speed, true);
 	if (!res)
-		return;
-		
-	pthread_t t;
-	pthread_create(&t, 0, thread, 0);
-	
-	for (;;)
+		return 1;
+
+	signal(SIGINT, &sigHandler);
+
+	std::thread th(thread);
+
+	while (!stop)
 	{
 		int res;
 		char data[1024];
@@ -63,5 +86,9 @@ void openConsole(int speed)
 				putchar(data[i]);
 		}
 	}
+
+	th.join();
+
+	uart_close();
 }
 
