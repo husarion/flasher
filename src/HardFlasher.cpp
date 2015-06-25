@@ -184,7 +184,7 @@ int HardFlasher::erase()
 		map<int, int> pages;
 
 		// TODO: optimize
-		for (int i = 0; i < m_hexFile.parts.size(); i++)
+		for (int i = 0; i < (int)m_hexFile.parts.size(); i++)
 		{
 			TPart* part = m_hexFile.parts[i];
 			for (uint32_t addr = part->getStartAddr(); addr <= part->getEndAddr(); addr += 256)
@@ -298,6 +298,7 @@ int HardFlasher::reset()
 int HardFlasher::cleanup()
 {
 	close();
+    return 0;
 }
 
 int HardFlasher::protect()
@@ -317,7 +318,6 @@ int HardFlasher::protect()
 	}
 	uint8_t data[1 + pagesToProtect.size()];
 	data[0] = (pagesToProtect.size() - 1) & 0xff;
-	int idx = 0;
 	for (unsigned int i = 0; i < pagesToProtect.size(); i++)
 		data[1 + i] = pagesToProtect[i];
 	// printf("\n");
@@ -717,8 +717,8 @@ void HardFlasher::dumpOptionBytes()
 int HardFlasher::dumpEmulatedEEPROM()
 {
     const uint32_t EEPROM_BASE = 0x08008000;
-    const uint32_t EEPROM_SIZE = 0x8000;
-    const uint32_t READOUT_SIZE = 128;
+    const int EEPROM_SIZE = 0x8000;
+    const int READOUT_SIZE = 128;
     const int ROW_SIZE = 32;
     char data[EEPROM_SIZE];
 
@@ -733,6 +733,7 @@ int HardFlasher::dumpEmulatedEEPROM()
         if((i % ROW_SIZE) == ROW_SIZE - 1)
             printf("\n");
     }
+    return 0;
 }
 
 // low-level protocol
