@@ -81,7 +81,7 @@ void callback(uint32_t cur, uint32_t total)
 	int width = 30;
 	int ratio = cur * width / total;
 	int id = cur / 2000;
-	
+
 	if (cur == (uint32_t) - 1)
 	{
 		printf("\rProgramming device... ");
@@ -91,12 +91,12 @@ void callback(uint32_t cur, uint32_t total)
 		printf("\rProgramming device... ");
 		return;
 	}
-	
+
 	static int lastID = -1;
 	if (id == lastID)
 		return;
 	lastID = id;
-	
+
 	printf("\rProgramming device... [");
 	for (int i = 0; i < width; i++)
 	{
@@ -122,15 +122,15 @@ int main(int argc, char** argv)
 	int res;
 	int regId = -1;
 	uint32_t regVer = 0xffffffff;
-	
+
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGINT, sigHandler);
-	
+
 	static struct option long_options[] =
 	{
 		{ "soft",       no_argument,       &doSoft,   1 },
 		{ "hard",       no_argument,       &doHard,   1 },
-		
+
 		{ "test",       no_argument,       &doTest ,  1 },
 		{ "flash",      no_argument,       &doFlash,  1 },
 #ifdef EMBED_BOOTLOADERS
@@ -141,23 +141,23 @@ int main(int argc, char** argv)
 		{ "dump",       no_argument,       &doDump,      1 },
 		{ "setup",      no_argument,       &doSetup,     1 },
 		{ "register",   no_argument,       &doRegister,  1 },
-		
+
 		{ "id",         required_argument, 0,       'i' },
 		{ "version",    required_argument, 0,       'v' },
 		{ "big",        no_argument,       &regType,  2 },
 		{ "pro",        no_argument,       &regType,  3 },
-		
+
 		{ "device",     required_argument, 0,       'd' },
 		{ "speed",      required_argument, 0,       's' },
-		
+
 		{ "usage",      no_argument,       &doHelp,   1 },
 		{ "help",       no_argument,       &doHelp,   1 },
-		
+
 		{ "console",    no_argument,       &doConsole, 1 },
-		
+
 		{ 0, 0, 0, 0 }
 	};
-	
+
 	for (;;)
 	{
 		int option_index = 0;
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 		int c = getopt_long(argc, argv, "hs:d:", long_options, &option_index);
 		if (c == -1)
 			break;
-			
+
 		switch (c)
 		{
 		case 'h':
@@ -220,13 +220,13 @@ int main(int argc, char** argv)
 				printf("invalid version\r\n");
 				exit(1);
 			}
-			
+
 			makeVersion(regVer, a, b, c, d);
 		}
 		break;
 		}
 	}
-	
+
 	doHard = !doSoft;
 	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister &&
 	          !doSetup && !doFlashBootloader && !doTest;
@@ -241,14 +241,14 @@ int main(int argc, char** argv)
 		usage(argv);
 		return 1;
 	}
-	
+
 	const char* filePath = 0;
 	if (optind < argc)
 		filePath = argv[optind];
-		
+
 	if (doFlash && doConsole && !filePath)
 		doFlash = 0;
-		
+
 	BEGIN_CHECK_USAGE();
 	CHECK_USAGE(doHard && doTest);
 	CHECK_USAGE(doHard && doFlash && filePath);
@@ -261,10 +261,10 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
 	CHECK_USAGE_NO_INC(doConsole);
 	END_CHECK_USAGE();
-	
+
 	int openBootloader = doTest || doFlash || doProtect || doUnprotect || doDump || doRegister || doSetup ||
 	                     doFlashBootloader;
-	                     
+
 	if (openBootloader)
 	{
 		Flasher *flasher = 0;
@@ -292,21 +292,21 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		}
-		
+
 		res = flasher->init();
 		if (res != 0)
 		{
 			printf("unable to initialize flasher\n");
 			return 1;
 		}
-		
+
 		while (true)
 		{
 			res = flasher->start();
 			if (res == 0)
 			{
 				uint32_t startTime = TimeUtilGetSystemTimeMs();
-				
+
 				if (doProtect)
 				{
 					printf("Protecting bootloader... ");
@@ -330,16 +330,16 @@ int main(int argc, char** argv)
 				else if (doRegister)
 				{
 					HardFlasher *hf = (HardFlasher*)flasher;
-					
+
 					TRoboCOREHeader oldHeader;
 					hf->readHeader(oldHeader);
-					
+
 					if (!oldHeader.isClear())
 					{
 						printf("Already registered\r\n");
 						break;
 					}
-					
+
 					printf("Registering...\r\n");
 					TRoboCOREHeader h;
 					h.headerVersion = 0x02;
@@ -360,7 +360,7 @@ int main(int argc, char** argv)
 							continue;
 						}
 					}
-					
+
 					printf("Erasing device... ");
 					res = flasher->erase();
 					if (res != 0)
@@ -368,7 +368,7 @@ int main(int argc, char** argv)
 						printf("\n");
 						continue;
 					}
-					
+
 					printf("Programming device... ");
 					res = flasher->flash();
 					if (res != 0)
@@ -376,7 +376,7 @@ int main(int argc, char** argv)
 						printf("\n");
 						continue;
 					}
-					
+
 					printf("Reseting device... ");
 					res = flasher->reset();
 					if (res != 0)
@@ -384,18 +384,18 @@ int main(int argc, char** argv)
 						printf("\n");
 						continue;
 					}
-					
+
 					uint32_t endTime = TimeUtilGetSystemTimeMs();
 					float time = endTime - startTime;
 					float avg = flasher->getHexFile().totalLength / (time / 1000.0f) / 1024.0f;
-					
+
 					printf("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 				}
 #ifdef EMBED_BOOTLOADERS
 				else if (doFlashBootloader)
 				{
 					static int stage = 0;
-					
+
 					if (stage == 0)
 					{
 						printf("Checking version... ");
@@ -412,7 +412,7 @@ int main(int argc, char** argv)
 							printf("header is invalid, unable to recognize device.\r\n");
 							break;
 						}
-						
+
 						printf("OK\r\n");
 						char buf[50];
 						int a, b, c, d;
@@ -426,7 +426,7 @@ int main(int argc, char** argv)
 							printf("Unsupported version\r\n");
 							break;
 						}
-						
+
 						bool found = false;
 						TBootloaderData* ptr = bootloaders;
 						while (ptr->name)
@@ -438,31 +438,31 @@ int main(int argc, char** argv)
 							}
 							ptr++;
 						}
-						
+
 						if (!found)
 						{
 							printf("Bootloader not found\r\n");
 							break;
 						}
-						
+
 						printf("Bootloader found\r\n");
-						
+
 						flasher->loadData(ptr->data);
-						
+
 						printf("Checking configuration... ");
 						res = flasher->setup();
 						if (res != 0)
 						{
 							continue;
 						}
-						
+
 						printf("Unprotecting bootloader... ");
 						res = flasher->unprotect();
 						if (res != 0)
 						{
 							continue;
 						}
-						
+
 						stage = 1; // device must be reseted after unprotecting
 						printf("Resetting device\r\n");
 						continue;
@@ -476,7 +476,7 @@ int main(int argc, char** argv)
 							printf("\n");
 							continue;
 						}
-						
+
 						printf("Programming device... ");
 						res = flasher->flash();
 						if (res != 0)
@@ -484,7 +484,7 @@ int main(int argc, char** argv)
 							printf("\n");
 							continue;
 						}
-						
+
 						printf("Protecting bootloader... ");
 						res = flasher->protect();
 						if (res != 0)
@@ -492,7 +492,7 @@ int main(int argc, char** argv)
 							printf("\n");
 							continue;
 						}
-						
+
 						printf("Reseting device... ");
 						res = flasher->reset();
 						if (res != 0)
@@ -500,7 +500,7 @@ int main(int argc, char** argv)
 							printf("\n");
 							continue;
 						}
-						
+
 						// printf("searching for bootloader %s", buf);
 						// printf("%s\n", buf);
 					}
@@ -514,10 +514,10 @@ int main(int argc, char** argv)
 				break;
 			}
 		}
-		
+
 		flasher->cleanup();
 	}
-	
+
 	if (doConsole)
 	{
 		int s = speed;
@@ -525,6 +525,6 @@ int main(int argc, char** argv)
 			s = 230400;
 		return runConsole(s);
 	}
-	
+
 	return 0;
 }

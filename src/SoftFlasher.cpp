@@ -37,7 +37,7 @@ int SoftFlasher::start()
 			printf("unable (%s)\n", XcpTransportGetLastError().c_str());
 			return -2;
 		}
-			
+
 		if (!XcpMasterConnect())
 		{
 			printf("unable, please reset your RoboCORE...\n");
@@ -45,7 +45,7 @@ int SoftFlasher::start()
 		else
 		{
 			printf("connected\n");
-			
+
 			printf("Initializing programming session... ");
 			if (!XcpMasterStartProgrammingSession())
 			{
@@ -80,18 +80,18 @@ int SoftFlasher::erase()
 int SoftFlasher::flash()
 {
 	uint32_t processedBytes = 0;
-	
+
 	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
 		uint32_t curAddr = part->getStartAddr();
 		uint8_t* data = part->data.data();
-		
+
 		while (curAddr <= part->getEndAddr())
 		{
 			int len = part->getEndAddr() - curAddr + 1;
 			if (len > 255) len = 255;
-			
+
 			if (!XcpMasterProgramData(curAddr, len, data))
 			{
 				if (m_callback)
@@ -101,11 +101,11 @@ int SoftFlasher::flash()
 				XcpMasterDeinit();
 				return -1;
 			}
-			
+
 			data += len;
 			curAddr += len;
 			processedBytes += len;
-			
+
 			if (m_callback)
 				m_callback(processedBytes, m_hexFile.totalLength);
 		}
@@ -113,7 +113,7 @@ int SoftFlasher::flash()
 	if (m_callback)
 		m_callback(-1, -1);
 	printf("OK\n");
-	
+
 	return 0;
 }
 int SoftFlasher::reset()
@@ -127,7 +127,7 @@ int SoftFlasher::reset()
 		return -1;
 	}
 	// printf("OK\n");
-	
+
 	// printf("Performing software reset... ");
 	if (!XcpMasterDisconnect())
 	{

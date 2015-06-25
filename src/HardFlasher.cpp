@@ -98,7 +98,7 @@ int HardFlasher::close()
 int HardFlasher::start()
 {
 	printf("Connecting to RoboCORE...");
-	
+
 	for (;;)
 	{
 		if (open())
@@ -120,7 +120,7 @@ int HardFlasher::start()
 			break;
 		}
 	}
-	
+
 	printf("Connecting to bootloader..");
 	for (;;)
 	{
@@ -129,13 +129,13 @@ int HardFlasher::start()
 			printf(" failed\r\n");
 			return -1;
 		}
-		
+
 		if (uart_tx("\x7f", 1) == -1)
 		{
 			printf(" failed\r\n");
 			return -1;
 		}
-		
+
 		int res = uart_read_ack_nack_fast();
 		// printf("res 0x%02x\r\n", (unsigned char)res);
 		if (res == ACK || res == NACK)
@@ -147,10 +147,10 @@ int HardFlasher::start()
 				return -1;
 			// if (getID())
 			// return -1;
-			
+
 			printf("OK\n");
-			
-			
+
+
 			// exit(0);
 			break;
 		}
@@ -164,11 +164,11 @@ int HardFlasher::start()
 int HardFlasher::erase()
 {
 	int res;
-	
+
 	if (m_dev.cmds[ERASE] == 0x44)
 	{
 		// printf("Erasing device with Extended Erase command\n");
-		
+
 		uart_send_cmd(0x44);
 		res = uart_read_ack_nack();
 		if (res != ACK)
@@ -177,11 +177,11 @@ int HardFlasher::erase()
 			// printf("Erase NACK'ed\n");
 			return -1;
 		}
-		
+
 		// printf("Erase ACK'ed\n");
-		
+
 		map<int, int> pages;
-		
+
 		// TODO: optimize
 		for (int i = 0; i < m_hexFile.parts.size(); i++)
 		{
@@ -197,9 +197,9 @@ int HardFlasher::erase()
 				}
 			}
 		}
-		
+
 		int pagesToEraseCnt = pages.size();
-		
+
 		uint8_t data[2 + pagesToEraseCnt * 2];
 		data[0] = (pagesToEraseCnt - 1) >> 8;
 		data[1] = (pagesToEraseCnt - 1) & 0xff;
@@ -212,9 +212,9 @@ int HardFlasher::erase()
 			data[2 + idx * 2 + 1] = pageNr & 0xff;
 			idx++;
 		}
-		
+
 		uart_write_data_checksum(data, sizeof(data));
-		
+
 		res = uart_read_ack_nack(40000);
 		if (res == ACK)
 		{
@@ -249,28 +249,28 @@ int HardFlasher::erase()
 int HardFlasher::flash()
 {
 	uint32_t sent = 0;
-	
+
 	for (unsigned int i = 0; i < m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
-		
+
 		uint32_t curAddr = part->getStartAddr();
 		uint8_t* data = part->data.data();
-		
+
 		while (curAddr <= part->getEndAddr())
 		{
 			int len = part->getEndAddr() - curAddr + 1;
 			if (len > 256) len = 256;
-			
+
 			// printf("writing 0x%08x len: %d...\n", curAddr, len);
-			
+
 			int res = writeMemory(curAddr, data, len);
 			if (res == 0)
 			{
 				sent += len;
 				curAddr += len;
 				data += len;
-				
+
 				if (m_callback)
 					m_callback(sent, m_hexFile.totalLength);
 			}
@@ -285,7 +285,7 @@ int HardFlasher::flash()
 	if (m_callback)
 		m_callback(-1, -1);
 	printf("OK\n");
-	
+
 	return 0;
 }
 int HardFlasher::reset()
@@ -302,11 +302,11 @@ int HardFlasher::cleanup()
 int HardFlasher::protect()
 {
 	int res;
-	
+
 	vector<int> pagesToProtect;
 	pagesToProtect.push_back(0);
 	pagesToProtect.push_back(1);
-	
+
 	uart_send_cmd(0x63);
 	res = uart_read_ack_nack();
 	if (res != ACK)
@@ -320,9 +320,9 @@ int HardFlasher::protect()
 	for (unsigned int i = 0; i < pagesToProtect.size(); i++)
 		data[1 + i] = pagesToProtect[i];
 	// printf("\n");
-	
+
 	uart_write_data_checksum(data, sizeof(data));
-	
+
 	res = uart_read_ack_nack(1000);
 	if (res != ACK)
 	{
@@ -335,23 +335,23 @@ int HardFlasher::protect()
 int HardFlasher::unprotect()
 {
 	int res;
-	
+
 	uart_send_cmd(0x73);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("ERROR(1)\n");
 		return -1;
 	}
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("ERROR(2)\n");
 		return -1;
 	}
-	
+
 	printf("OK\n");
 	return 0;
 }
@@ -363,17 +363,17 @@ int HardFlasher::dump()
 int HardFlasher::setup()
 {
 	uint32_t op1;
-	
+
 	if (readMemory(OPTION_BYTE_1, &op1, 4))
 		return -1;
-		
+
 	// validating
 	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
 	{
 		printf("FAIL (invalid read)\r\n");
 		return -1;
 	}
-	
+
 	uint8_t curBOR = (op1 & BOR_MASK) >> BOR_BIT;
 	if (curBOR != 0b10)
 	{
@@ -388,7 +388,7 @@ int HardFlasher::setup()
 	{
 		printf("OK\r\n");
 	}
-	
+
 	return 0;
 }
 int HardFlasher::readHeader(TRoboCOREHeader& header)
@@ -400,22 +400,22 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 {
 	const uint32_t OTP_BASE = OTP_START + 32 * 0;
 	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
-	
+
 	header.calcChecksum();
-	
+
 	writeMemory(OTP_BASE, &header, sizeof(header));
 	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
 	       header.headerVersion, header.type, header.version, header.id);
-	       
+
 	uint8_t data[sizeof(header)];
 	readMemory(OTP_BASE, data, sizeof(header));
-	
+
 	if (memcmp(data, &header, sizeof(header)) != 0)
 	{
 		printf("unable to register\r\n");
 		return -2;
 	}
-	
+
 	uint8_t d[] = { 0x00 };
 	writeMemory(OTP_LOCK, d, 1);
 
@@ -426,58 +426,58 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 int HardFlasher::getVersion()
 {
 	int res;
-	
+
 	printf(">>> get version\n");
-	
+
 	uart_send_cmd(0x01);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get version: NACK(1)\n");
 		return -1;
 	}
-	
+
 	m_dev.version = uart_read_byte();
 	m_dev.option1 = uart_read_byte();
 	m_dev.option2 = uart_read_byte();
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get version: NACK(2)\n");
 		return -1;
 	}
-	
+
 	printf("Device version: 0x%02x Option1: 0x%02x Option2: 0x%02x\n", m_dev.version, m_dev.option1, m_dev.option2);
-	
+
 	return 0;
 }
 int HardFlasher::getCommand()
 {
 	int res;
-	
+
 	// printf(">>> get command\n");
-	
+
 	uart_send_cmd(0x00);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get command: NACK(1)\n");
 		return -1;
 	}
-	
+
 	int len = uart_read_byte();
 	if (len < 0)
 	{
 		printf("get command: invalid len (%d)\n", len);
 		return -1;
 	}
-	
+
 	len += 1;
 	// printf ("getcmd len: %d\n", len);
-	
+
 	char d[50];
 	memset(d, 0, 50);
 	if (uart_read_data(d, len) == -1)
@@ -486,7 +486,7 @@ int HardFlasher::getCommand()
 		return -1;
 	}
 	m_dev.bootVersion = d[0];
-	
+
 	for (int i = 0; i < 11; i++)
 		m_dev.cmds[i] = d[i + 1];
 	// printf("Bootloader version: 0x%02x = v%d.%d\n", m_dev.bootVersion, m_dev.bootVersion >> 4, m_dev.bootVersion & 0x0f);
@@ -501,55 +501,55 @@ int HardFlasher::getCommand()
 	// printf("Write Unpotect is 0x%02x\n", m_dev.cmds[WRITE_UNPROTECT]);
 	// printf("Read Protect   is 0x%02x\n", m_dev.cmds[READOUT_PROTECT]);
 	// printf("Read Unprotect is 0x%02x\n", m_dev.cmds[READOUT_UNPROTECT]);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get cmd: NACK(2)\n");
 		return -1;
 	}
-	
+
 	return 0;
 }
 int HardFlasher::getID()
 {
 	int res;
-	
+
 	printf(">>> get id\n");
-	
+
 	uart_send_cmd(m_dev.cmds[GET_ID]);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get id: NACK(1)\n");
 		return -1;
 	}
-	
+
 	int len = uart_read_byte() + 1;
 	printf("get id: length: %d\n", len);
-	
+
 	char d[50];
 	memset(d, 0, 50);
 	uart_read_data(d, len);
-	
+
 	m_dev.id = (d[0] << 8) | d[1];
-	
+
 	printf("Device ID: 0x%04x\n", m_dev.id);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
 		printf("get id: NACK(2)\n");
 		return -1;
 	}
-	
+
 	return 0;
 }
 int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 {
 	uart_send_cmd(0x11);
-	
+
 	int res = uart_read_ack_nack();
 	if (res != ACK)
 	{
@@ -558,7 +558,7 @@ int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 	}
 	uint32_t tmp = SWAP32(addr);
 	uart_write_data_checksum((char*)&tmp, 4);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
@@ -568,25 +568,25 @@ int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 	uint8_t outbuf[2];
 	outbuf[0] = len - 1;
 	outbuf[1] = 0xff - outbuf[0];
-	
+
 	uart_write_data(outbuf, 2);
 	res = uart_read_ack_nack(1000);
-	
+
 	if (res != ACK)
 	{
 		printf("ERROR3\n");
 		return -1;
 	}
-	
+
 	int r = uart_read_data(data, len);
 	return 0;
 }
 int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 {
 	char buf[256 + 1];
-	
+
 	uart_send_cmd(0x31);
-	
+
 	int res = uart_read_ack_nack();
 	if (res != ACK)
 	{
@@ -595,7 +595,7 @@ int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 	}
 	uint32_t tmp = SWAP32(addr);
 	uart_write_data_checksum((char*)&tmp, 4);
-	
+
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
@@ -604,16 +604,16 @@ int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 	}
 	buf[0] = len - 1;
 	memcpy(buf + 1, data, len);
-	
+
 	uart_write_data_checksum(buf, len + 1);
 	res = uart_read_ack_nack();
-	
+
 	if (res != ACK)
 	{
 		printf("ERROR\n");
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -621,12 +621,12 @@ int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 void HardFlasher::dumpOptionBytes()
 {
 	uint32_t op1, op2;
-	
+
 	readMemory(OPTION_BYTE_1, &op1, 4);
 	readMemory(OPTION_BYTE_2, &op2, 4);
 	// printf("0x1fffc000 = 0x%08x\r\n", op1);
 	// printf("0x1fffc008 = 0x%08x\r\n", op2);
-	
+
 	// validating
 	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
 	{
@@ -638,7 +638,7 @@ void HardFlasher::dumpOptionBytes()
 		printf("er\r\n");
 		return;
 	}
-	
+
 	printf("\r\n");
 	printf("Option bytes:\r\n");
 	uint8_t RDP = (op1 & 0x0000ff00) >> 8;
@@ -661,7 +661,7 @@ void HardFlasher::dumpOptionBytes()
 	case 0b10: printf("BOR_LEV    = 0b10 - Reset threshold level from 2.10 to 2.40 V\r\n"); break;
 	case 0b11: printf("BOR_LEV    = 0b11 - Reset threshold level from 1.8 to 2.10 V\r\n"); break;
 	}
-	
+
 	printf("Protected pages:");
 	uint16_t wrpr = op2 & 0xfff;
 	for (int i = 0; i <= 11; i++)
@@ -670,15 +670,15 @@ void HardFlasher::dumpOptionBytes()
 			printf(" %d", i);
 	}
 	printf("\r\n");
-	
+
 	printf("\r\n");
 	printf("Registration data:");
 	const uint32_t OTP_BASE = OTP_START + 32 * 0;
 	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
-	
+
 	TRoboCOREHeader header;
 	readMemory(OTP_BASE, &header, sizeof(header));
-	
+
 	uint8_t lock;
 	readMemory(OTP_LOCK, &lock, 1);
 	switch (lock)
@@ -687,9 +687,9 @@ void HardFlasher::dumpOptionBytes()
 	case 0xff: printf(" (UNLOCKED)"); break;
 	default: printf(" (INVALID LOCK 0x%02x)", lock); break;
 	}
-	
+
 	printf("\r\n");
-	
+
 	if (header.isClear())
 	{
 		printf("UNREGISTERED\r\n");
@@ -698,7 +698,7 @@ void HardFlasher::dumpOptionBytes()
 	{
 		int a, b, c, d;
 		parseVersion(header.version, a, b, c, d);
-		
+
 		printf("Header version = 0x%02x %s\r\n", header.headerVersion, header.isValid() ? "(CHECKSUM VALID)" : "(!! CHECKSUM INVALID !!)");
 		switch (header.type)
 		{

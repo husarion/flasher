@@ -29,13 +29,13 @@ int setPin(int pin, int value)
 bool uart_open(int speed, bool showErrors)
 {
 	int ret;
-	
+
 	if (ftdi)
 	{
 		uart_close();
 	}
 	ftdi = ftdi_new();
-	
+
 	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
 	{
 		if (showErrors)
@@ -44,23 +44,23 @@ bool uart_open(int speed, bool showErrors)
 		ftdi = 0;
 		return 0;
 	}
-	
+
 	ftdi->usb_read_timeout = 1000;
 	ftdi->usb_write_timeout = 1000;
 	libusb_set_auto_detach_kernel_driver(ftdi->usb_dev, 1);
 	ftdi_read_data_set_chunksize(ftdi, 4096);
 	::speed = speed;
-	
+
 	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, NONE);
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
-	
+
 	ftdi_disable_bitbang(ftdi);
 #ifdef WIN32
 	ftdi_set_baudrate(ftdi, speed * 4);
 #else
 	ftdi_set_baudrate(ftdi, speed);
 #endif
-	
+
 	return ftdi;
 }
 int uart_check_gpio()
@@ -89,10 +89,10 @@ int uart_reset_boot()
 	usleep(100000);
 	setPin(RST, 0);
 	usleep(100000);
-	
+
 	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, EVEN);
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
-	
+
 	ftdi_disable_bitbang(ftdi);
 #ifdef WIN32
 	ftdi_set_baudrate(ftdi, speed * 4);
@@ -120,11 +120,11 @@ int uart_tx(const void* data, int len)
 int uart_rx_any(void* data, int len)
 {
 	uint8_t* _data = (uint8_t*)data;
-	
+
 	int rread = ftdi_read_data(ftdi, _data, len);
 	if (rread < 0)
 		return -1;
-		
+
 	return rread;
 }
 int uart_rx(void* data, int len, uint32_t timeout_ms)
@@ -132,13 +132,13 @@ int uart_rx(void* data, int len, uint32_t timeout_ms)
 	uint8_t* _data = (uint8_t*)data;
 	int r = 0;
 	uint32_t start = getTicks();
-	
+
 	while (len && getTicks() - start < timeout_ms)
 	{
 		int rread = ftdi_read_data(ftdi, _data, len);
 		if (rread < 0)
 			return -1;
-			
+
 		len -= rread;
 		_data += rread;
 		r += rread;
@@ -148,16 +148,16 @@ int uart_rx(void* data, int len, uint32_t timeout_ms)
 void uart_reset_normal()
 {
 	int ret;
-	
+
 	setPin(BOOT0, 0);
 	usleep(10000);
 	setPin(RST, 1);
 	usleep(100000);
 	setPin(RST, 0);
-	
+
 	ftdi_set_line_property(ftdi, BITS_8, STOP_BIT_1, NONE);
 	ftdi_setflowctrl(ftdi, SIO_DISABLE_FLOW_CTRL);
-	
+
 	ftdi_disable_bitbang(ftdi);
 #ifdef WIN32
 	ftdi_set_baudrate(ftdi, speed * 4);
@@ -168,15 +168,15 @@ void uart_reset_normal()
 void uart_close()
 {
 	int ret;
-	
+
 	if (!ftdi)
 		return;
-		
+
 	// libusb_attach_kernel_driver(ftdi->usb_dev, ftdi->interface);
 	if ((ret = ftdi_usb_close(ftdi)) < 0)
 		fprintf(stderr, "unable to close ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
-		
+
 	ftdi_free(ftdi);
-	
+
 	ftdi = 0;
 }
