@@ -26,7 +26,8 @@ using namespace std;
 
 int doHelp = 0;
 int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
-    doDump = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0, doTest = 0;
+    doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
+    doTest = 0;
 int regType = -1;
 int doConsole = 0;
 
@@ -74,6 +75,7 @@ void usage(char** argv)
 	fprintf(stderr, "       --unprotect      unprotects bootloader against\n");
 	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
 	fprintf(stderr, "       --dump           dumps device info (only valid with --hard)\n");
+	fprintf(stderr, "       --dump-eeprom    dumps emulated EEPROM content (only valid with --hard)\n");
 }
 
 void callback(uint32_t cur, uint32_t total)
@@ -139,6 +141,7 @@ int main(int argc, char** argv)
 		{ "unprotect",  no_argument,       &doUnprotect, 1 },
 		{ "protect",    no_argument,       &doProtect,   1 },
 		{ "dump",       no_argument,       &doDump,      1 },
+		{ "dump-eeprom",no_argument,       &doDumpEEPROM,1 },
 		{ "setup",      no_argument,       &doSetup,     1 },
 		{ "register",   no_argument,       &doRegister,  1 },
 
@@ -228,14 +231,14 @@ int main(int argc, char** argv)
 	}
 
 	doHard = !doSoft;
-	doFlash = !doProtect && !doUnprotect && !doDump && !doRegister &&
+	doFlash = !doProtect && !doUnprotect && !doDump && !doDumpEEPROM && !doRegister &&
 	          !doSetup && !doFlashBootloader && !doTest;
 	if (doHelp)
 	{
 		usage(argv);
 		return 1;
 	}
-	if (doFlash + doProtect + doUnprotect + doDump + doRegister + doSetup + doFlashBootloader + doTest > 1)
+	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader + doTest > 1)
 	{
 		warn1();
 		usage(argv);
@@ -255,6 +258,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doProtect);
 	CHECK_USAGE(doHard && doUnprotect);
 	CHECK_USAGE(doHard && doDump);
+	CHECK_USAGE(doHard && doDumpEEPROM);
 	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
 	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doHard && doFlashBootloader);
@@ -262,8 +266,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE_NO_INC(doConsole);
 	END_CHECK_USAGE();
 
-	int openBootloader = doTest || doFlash || doProtect || doUnprotect || doDump || doRegister || doSetup ||
-	                     doFlashBootloader;
+	int openBootloader = doTest || doFlash || doProtect || doUnprotect || doDump || doDumpEEPROM || doRegister || doSetup || doFlashBootloader;
 
 	if (openBootloader)
 	{
@@ -321,6 +324,11 @@ int main(int argc, char** argv)
 				{
 					printf("Dumping info...\r\n");
 					res = flasher->dump();
+				}
+				else if (doDumpEEPROM)
+				{
+					printf("Dumping info...\r\n");
+					res = flasher->dumpEmulatedEEPROM();
 				}
 				else if (doSetup)
 				{

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <vector>
 #include <map>
@@ -358,6 +359,7 @@ int HardFlasher::unprotect()
 int HardFlasher::dump()
 {
 	dumpOptionBytes();
+    dumpEmulatedEEPROM();
 	return 0;
 }
 int HardFlasher::setup()
@@ -566,6 +568,7 @@ int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 		return -1;
 	}
 	uint8_t outbuf[2];
+    assert(len < 256 && len >= 0);
 	outbuf[0] = len - 1;
 	outbuf[1] = 0xff - outbuf[0];
 
@@ -709,6 +712,27 @@ void HardFlasher::dumpOptionBytes()
 		printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
 		printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
 	}
+}
+
+int HardFlasher::dumpEmulatedEEPROM()
+{
+    const uint32_t EEPROM_BASE = 0x08008000;
+    const uint32_t EEPROM_SIZE = 0x8000;
+    const uint32_t READOUT_SIZE = 128;
+    const int ROW_SIZE = 32;
+    char data[EEPROM_SIZE];
+
+    printf("Emulated EEPROM:\n");
+
+    for(int i=0; i < EEPROM_SIZE; i += READOUT_SIZE) {
+        readMemory(EEPROM_BASE + i, data + i, READOUT_SIZE);
+    }
+
+    for(int i=0; i < EEPROM_SIZE; i ++) {
+        printf("%02x", (int)((uint8_t)data[i]));
+        if((i % ROW_SIZE) == ROW_SIZE - 1)
+            printf("\n");
+    }
 }
 
 // low-level protocol

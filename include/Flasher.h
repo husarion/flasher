@@ -33,6 +33,7 @@ public:
 	virtual int protect() = 0;
 	virtual int unprotect() = 0;
 	virtual int dump() = 0;
+	virtual int dumpEmulatedEEPROM() = 0;
 	virtual int setup() = 0;
 
 protected:

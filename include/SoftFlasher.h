@@ -16,8 +16,9 @@ public:
 	int protect() { return -1; }
 	int unprotect() { return -1; }
 	int dump() { return -1; }
+	int dumpEmulatedEEPROM() { return -1; }
 	int setup() { return -1; }
-	
+
 private:
 	int open();
 	int close();

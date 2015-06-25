@@ -54,7 +54,7 @@ if(WIN32)
 
 	target_link_libraries(${TARGET_NAME}
 		ftdi1 usb-1.0 pthread ws2_32)
-	
+
 	add_definitions(-DWIN32)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")
