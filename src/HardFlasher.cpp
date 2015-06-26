@@ -13,6 +13,7 @@ using namespace std;
 #include "myFTDI.h"
 #include "timeutil.h"
 #include "TRoboCOREHeader.h"
+#include "utils.h"
 
 #define ACK 0x79
 #define NACK 0x1f
@@ -35,14 +36,14 @@ int HardFlasher::open()
 	bool res = uart_open(m_baudrate, false);
 	if (res)
 	{
-		printf(" OK\r\n");
-		printf("Checking settings... ");
+		LOG_NICE(" OK\r\n");
+		LOG_NICE("Checking settings... ");
 		int r = uart_check_gpio();
 		if (r)
 		{
 			uart_close();
-			printf(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
-			printf("Unplug RoboCORE.");
+			LOG_NICE(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
+			LOG_NICE("Unplug RoboCORE.");
 			bool restarted = false;
 			for (;;)
 			{
@@ -52,7 +53,7 @@ int HardFlasher::open()
 					if (!res)
 					{
 						restarted = true;
-						printf(" OK, plug it again.");
+						LOG_NICE(" OK, plug it again.");
 					}
 					else
 					{
@@ -69,15 +70,15 @@ int HardFlasher::open()
 				static int cnt = 0;
 				if (cnt++ == 15)
 				{
-					printf(".");
+					LOG_NICE(".");
 					cnt = 0;
 				}
 			}
-			printf(" OK\r\n");
+			LOG_NICE(" OK\r\n");
 		}
 		else
 		{
-			printf(" OK\r\n");
+			LOG_NICE(" OK\r\n");
 		}
 		return 0;
 	}
@@ -98,8 +99,11 @@ int HardFlasher::close()
 
 int HardFlasher::start()
 {
-	printf("Connecting to RoboCORE...");
+	LOG_NICE("Connecting to RoboCORE...");
 
+retry_uart_open:
+	// uart opening loop
+	LOG_DEBUG("trying to open uart...");
 	for (;;)
 	{
 		if (open())
@@ -108,11 +112,11 @@ int HardFlasher::start()
 			if (!plugInMsgShown)
 			{
 				plugInMsgShown = true;
-				printf(" plug in RoboCORE..");
+				LOG_NICE(" plug in RoboCORE..");
 			}
 			else
 			{
-				printf(".");
+				LOG_NICE(".");
 			}
 			TimeUtilDelayMs(200);
 		}
@@ -122,18 +126,23 @@ int HardFlasher::start()
 		}
 	}
 
-	printf("Connecting to bootloader..");
-	for (;;)
+	// bootloader connecting loop
+	LOG_NICE("Connecting to bootloader..");
+	LOG_DEBUG("trying to connect to bootloader...");
+	int tries;
+	for (tries = 0; tries < 8; tries++)
 	{
 		if (uart_reset_boot())
 		{
-			printf(" failed\r\n");
+			LOG_NICE(" failed\r\n");
+			LOG_DEBUG("unable to reset to boot");
 			return -1;
 		}
 
 		if (uart_tx("\x7f", 1) == -1)
 		{
-			printf(" failed\r\n");
+			LOG_NICE(" failed\r\n");
+			LOG_DEBUG("unable to send init");
 			return -1;
 		}
 
@@ -143,24 +152,29 @@ int HardFlasher::start()
 		{
 			// if (getVersion())
 			// return -1;
-			printf(" ");
+			LOG_NICE(" ");
 			if (getCommand())
 				return -1;
 			// if (getID())
 			// return -1;
 
-			printf("OK\n");
+			LOG_DEBUG("OK");
+			LOG_NICE("OK\n");
 
-
-			// exit(0);
-			break;
+			return 0;
 		}
 		else
 		{
-			printf(".");
+			LOG_DEBUG("unable to read init resp");
+			LOG_NICE(".");
 		}
 	}
-	return 0;
+
+	LOG_DEBUG("no bootloader response after %d retries, resetting uart...", tries);
+	LOG_NICE(" UNABLE (restarting)\n");
+	LOG_NICE("Connecting to RoboCORE...");
+	uart_close();
+	goto retry_uart_open;
 }
 int HardFlasher::erase()
 {
@@ -174,7 +188,8 @@ int HardFlasher::erase()
 		res = uart_read_ack_nack();
 		if (res != ACK)
 		{
-			printf("ERROR\n");
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("erase not ack'ed");
 			// printf("Erase NACK'ed\n");
 			return -1;
 		}
@@ -208,7 +223,8 @@ int HardFlasher::erase()
 		for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
 		{
 			int pageNr = it->first;
-			printf("%d ", pageNr);
+			LOG_NICE("%d ", pageNr);
+			LOG_DEBUG("page %d", pageNr);
 			data[2 + idx * 2] = pageNr >> 8;
 			data[2 + idx * 2 + 1] = pageNr & 0xff;
 			idx++;
@@ -219,31 +235,33 @@ int HardFlasher::erase()
 		res = uart_read_ack_nack(40000);
 		if (res == ACK)
 		{
-			printf("OK\n");
-			// printf("Mass Erase ACK'ed\n");
+			LOG_NICE("OK\n");
+			LOG_DEBUG("mass Erase ACK'ed");
 			return 0;
 		}
 		else if (res == NACK)
 		{
-			printf("ERROR\n");
-			// printf("Mass Erase NACK'ed\n");
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("mass Erase NACK'ed");
 			return -1;
 		}
 		else
 		{
-			printf("ERROR\n");
-			// printf("Timeout\n");
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("timeout");
 			return -1;
 		}
 	}
 	else if (m_dev.cmds[ERASE] == 0x43)
 	{
-		printf("ERROR\n");
+		LOG_NICE("ERROR\n");
+		LOG_DEBUG("ERROR");
 		return -1; // not supported
 	}
 	else
 	{
-		printf("ERROR (unknown command)\n");
+		LOG_NICE("ERROR (unknown command)\n");
+		LOG_DEBUG("ERROR (unknown command)");
 		return -2;
 	}
 }
@@ -285,20 +303,22 @@ int HardFlasher::flash()
 	}
 	if (m_callback)
 		m_callback(-1, -1);
-	printf("OK\n");
+	LOG_NICE("OK\n");
+	LOG_DEBUG("OK");
 
 	return 0;
 }
 int HardFlasher::reset()
 {
 	close();
-	printf("OK\n");
+	LOG_NICE("OK\n");
+	LOG_DEBUG("OK");
 	return 0;
 }
 int HardFlasher::cleanup()
 {
 	close();
-    return 0;
+	return 0;
 }
 
 int HardFlasher::protect()
@@ -313,7 +333,7 @@ int HardFlasher::protect()
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR(1)\n");
+		LOG_NICE("ERROR(1)\n");
 		return -1;
 	}
 	uint8_t data[1 + pagesToProtect.size()];
@@ -327,10 +347,10 @@ int HardFlasher::protect()
 	res = uart_read_ack_nack(1000);
 	if (res != ACK)
 	{
-		printf("ERROR(2)\n");
+		LOG_NICE("ERROR(2)\n");
 		return -1;
 	}
-	printf("OK\n");
+	LOG_NICE("OK\n");
 	return 0;
 }
 int HardFlasher::unprotect()
@@ -342,24 +362,24 @@ int HardFlasher::unprotect()
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR(1)\n");
+		LOG_NICE("ERROR(1)\n");
 		return -1;
 	}
 
 	res = uart_read_ack_nack();
 	if (res != ACK)
 	{
-		printf("ERROR(2)\n");
+		LOG_NICE("ERROR(2)\n");
 		return -1;
 	}
 
-	printf("OK\n");
+	LOG_NICE("OK\n");
 	return 0;
 }
 int HardFlasher::dump()
 {
 	dumpOptionBytes();
-    dumpEmulatedEEPROM();
+	dumpEmulatedEEPROM();
 	return 0;
 }
 int HardFlasher::setup()
@@ -372,7 +392,7 @@ int HardFlasher::setup()
 	// validating
 	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
 	{
-		printf("FAIL (invalid read)\r\n");
+		LOG_NICE("FAIL (invalid read)\r\n");
 		return -1;
 	}
 
@@ -383,12 +403,12 @@ int HardFlasher::setup()
 		op1 |= BOR_LEVEL << BOR_BIT;
 		if (writeMemory(OPTION_BYTE_1, &op1, 2))
 			return -1;
-		printf("CHANGED\r\n");
+		LOG_NICE("CHANGED\r\n");
 		return -1;
 	}
 	else
 	{
-		printf("OK\r\n");
+		LOG_NICE("OK\r\n");
 	}
 
 	return 0;
@@ -568,7 +588,7 @@ int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 		return -1;
 	}
 	uint8_t outbuf[2];
-    assert(len < 256 && len >= 0);
+	assert(len < 256 && len >= 0);
 	outbuf[0] = len - 1;
 	outbuf[1] = 0xff - outbuf[0];
 
@@ -716,24 +736,26 @@ void HardFlasher::dumpOptionBytes()
 
 int HardFlasher::dumpEmulatedEEPROM()
 {
-    const uint32_t EEPROM_BASE = 0x08008000;
-    const int EEPROM_SIZE = 0x8000;
-    const int READOUT_SIZE = 128;
-    const int ROW_SIZE = 32;
-    char data[EEPROM_SIZE];
+	const uint32_t EEPROM_BASE = 0x08008000;
+	const int EEPROM_SIZE = 0x8000;
+	const int READOUT_SIZE = 128;
+	const int ROW_SIZE = 32;
+	char data[EEPROM_SIZE];
 
-    printf("Emulated EEPROM:\n");
+	printf("Emulated EEPROM:\n");
 
-    for(int i=0; i < EEPROM_SIZE; i += READOUT_SIZE) {
-        readMemory(EEPROM_BASE + i, data + i, READOUT_SIZE);
-    }
+	for (int i = 0; i < EEPROM_SIZE; i += READOUT_SIZE)
+	{
+		readMemory(EEPROM_BASE + i, data + i, READOUT_SIZE);
+	}
 
-    for(int i=0; i < EEPROM_SIZE; i ++) {
-        printf("%02x", (int)((uint8_t)data[i]));
-        if((i % ROW_SIZE) == ROW_SIZE - 1)
-            printf("\n");
-    }
-    return 0;
+	for (int i = 0; i < EEPROM_SIZE; i ++)
+	{
+		printf("%02x", (int)((uint8_t)data[i]));
+		if ((i % ROW_SIZE) == ROW_SIZE - 1)
+			printf("\n");
+	}
+	return 0;
 }
 
 // low-level protocol

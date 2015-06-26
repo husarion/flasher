@@ -10,6 +10,8 @@
 #include <ftdi.h>
 #include <ftdi_i.h>
 
+#include "utils.h"
+
 #define BOOT0 0
 #define RST   1
 
@@ -23,6 +25,7 @@ int setPin(int pin, int value)
 {
 	vals &= ~(1 << pin);
 	vals |= (1 << (pin + 4)) | (value << pin);
+	LOG_DEBUG("setting pin values 0x%02x", vals);
 	return ftdi_set_bitmode(ftdi, vals, BITMODE_CBUS);
 }
 
@@ -36,6 +39,7 @@ bool uart_open(int speed, bool showErrors)
 	}
 	ftdi = ftdi_new();
 
+	LOG_DEBUG("opening ftdi");
 	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
 	{
 		if (showErrors)
@@ -65,6 +69,7 @@ bool uart_open(int speed, bool showErrors)
 }
 int uart_check_gpio()
 {
+	LOG_DEBUG("checking gpio config");
 	ftdi_read_eeprom(ftdi);
 	ftdi_eeprom_decode(ftdi, 0);
 	int p1 = ftdi->eeprom->cbus_function[0];
@@ -82,6 +87,7 @@ int uart_check_gpio()
 }
 int uart_reset_boot()
 {
+	LOG_DEBUG("resetting to bootloader mode...");
 	setPin(BOOT0, 1);
 	usleep(10000);
 	setPin(RST, 1);
@@ -147,6 +153,7 @@ int uart_rx(void* data, int len, uint32_t timeout_ms)
 }
 void uart_reset_normal()
 {
+	LOG_DEBUG("resetting to normal mode...");
 	setPin(BOOT0, 0);
 	usleep(10000);
 	setPin(RST, 1);
@@ -170,6 +177,7 @@ void uart_close()
 	if (!ftdi)
 		return;
 
+	LOG_DEBUG("closing ftdi...");
 	// libusb_attach_kernel_driver(ftdi->usb_dev, ftdi->interface);
 	if ((ret = ftdi_usb_close(ftdi)) < 0)
 		fprintf(stderr, "unable to close ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
