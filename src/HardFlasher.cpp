@@ -581,7 +581,7 @@ int HardFlasher::readMemory(uint32_t addr, void* data, int len)
 		return -1;
 	}
 
-	int r = uart_read_data(data, len);
+	uart_read_data(data, len);
 	return 0;
 }
 int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)

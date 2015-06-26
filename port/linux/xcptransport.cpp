@@ -170,7 +170,7 @@ uint8_t XcpTransportSendPacket(uint8_t *data, uint8_t len, uint16_t timeOutMs)
 	int32_t bytesRead;
 	uint8_t *uartReadDataPtr;
 	uint32_t timeoutTime;
-	uint32_t nowTime;
+	// uint32_t nowTime;
 	ssize_t result;
 	
 	/* ------------------------ XCP packet transmission -------------------------------- */

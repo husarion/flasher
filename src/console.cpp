@@ -90,5 +90,7 @@ int runConsole(int speed)
 	th.join();
 
 	uart_close();
+
+	return 0;
 }
 

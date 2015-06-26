@@ -164,7 +164,6 @@ int main(int argc, char** argv)
 	for (;;)
 	{
 		int option_index = 0;
-		char *p;
 		int c = getopt_long(argc, argv, "hs:d:", long_options, &option_index);
 		if (c == -1)
 			break;

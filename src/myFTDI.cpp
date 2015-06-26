@@ -65,8 +65,7 @@ bool uart_open(int speed, bool showErrors)
 }
 int uart_check_gpio()
 {
-	int r;
-	r = ftdi_read_eeprom(ftdi);
+	ftdi_read_eeprom(ftdi);
 	ftdi_eeprom_decode(ftdi, 0);
 	int p1 = ftdi->eeprom->cbus_function[0];
 	int p2 = ftdi->eeprom->cbus_function[1];
@@ -99,6 +98,7 @@ int uart_reset_boot()
 #else
 	ftdi_set_baudrate(ftdi, speed);
 #endif
+	return 0;
 }
 bool uart_is_opened()
 {
@@ -147,8 +147,6 @@ int uart_rx(void* data, int len, uint32_t timeout_ms)
 }
 void uart_reset_normal()
 {
-	int ret;
-
 	setPin(BOOT0, 0);
 	usleep(10000);
 	setPin(RST, 1);

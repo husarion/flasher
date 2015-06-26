@@ -102,7 +102,7 @@ static uint8_t xcpMaxProgCto = 0;
 static uint8_t xcpMaxDto;
 
 /** \brief Internal data buffer for storing the data of the XCP response packet. */
-static tXcpTransportResponsePacket responsePacket;
+// static tXcpTransportResponsePacket responsePacket;
 
 
 /************************************************************************************//**

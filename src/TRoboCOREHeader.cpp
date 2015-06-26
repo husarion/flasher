@@ -5,7 +5,7 @@
 bool TRoboCOREHeader::isClear()
 {
 	uint8_t* ptr = (uint8_t*)this;
-	for (int i = 0; i < sizeof(TRoboCOREHeader); i++)
+	for (size_t i = 0; i < sizeof(TRoboCOREHeader); i++)
 		if (*ptr++ != 0xff)
 			return false;
 	return true;

@@ -11,7 +11,7 @@ public:
 	int erase();
 	int flash();
 	int reset();
-	int cleanup() { }
+	int cleanup() { return 0; }
 
 	int protect() { return -1; }
 	int unprotect() { return -1; }

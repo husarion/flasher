@@ -71,8 +71,6 @@ int THexFile::loadData(const char* data)
 		delete parts[i];
 	parts.clear();
 
-	char del[2] = "\n";
-
 	const char *end = strchr(data, '\n');
 
 	while (end)
@@ -103,13 +101,10 @@ int THexFile::parseLine(const string& line)
 		// printf("got part 0x%08x cur len: %d\r\n", p->startAddr, p->data.size());
 		// usleep(10000);
 		totalLength += len;
-		for (int i = 0; i < len; i++)
+		for (uint32_t i = 0; i < len; i++)
 		{
-			uint32_t dstAddr = extAddr4 + extAddr2 + addr + i;
 			uint8_t byte = strhex2int(line.substr(9 + i * 2, 2));
 			p->data.push_back(byte);
-			// printf("0x%08x\r\n", dstAddr);
-			// data[dstAddr] = byte;
 		}
 	}
 	break;
