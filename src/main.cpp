@@ -119,13 +119,40 @@ static void sigHandler(int)
 	exit(0);
 }
 
+void decodeKey(const char* source, char* target)
+{
+	if (strlen(source) != 32)
+	{
+		printf("invalid key length (%s)\n", source);
+		exit(1);
+	}
+	for (int i = 0; i < 16; i ++)
+	{
+		char byte[3];
+		byte[0] = source[i * 2];
+		byte[1] = source[i * 2 + 1];
+		byte[2] = 0;
+		int val;
+		int read = sscanf(byte, "%x", &val);
+		if (read != 1 || !isxdigit(byte[0]) || !isxdigit(byte[1]))
+		{
+			printf("invalid key");
+			exit(1);
+		}
+		target[i] = (char)val;
+	}
+}
+
 int main(int argc, char** argv)
 {
 	int speed = -1;
-	const char* device = 0;
+	const char* device = nullptr;
 	int res;
 	int regId = -1;
+	int headerId = -1;
 	uint32_t regVer = 0xffffffff;
+	char robocoreKey[16];
+	bool hasKey = false;
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGINT, sigHandler);
@@ -143,11 +170,15 @@ int main(int argc, char** argv)
 		{ "unprotect",  no_argument,       &doUnprotect, 1 },
 		{ "protect",    no_argument,       &doProtect,   1 },
 		{ "dump",       no_argument,       &doDump,      1 },
-		{ "dump-eeprom",no_argument,       &doDumpEEPROM,1 },
+		{ "dump-eeprom", no_argument,       &doDumpEEPROM, 1 },
 		{ "setup",      no_argument,       &doSetup,     1 },
+
+		// "hidden" options for registration
 		{ "register",   no_argument,       &doRegister,  1 },
 
 		{ "id",         required_argument, 0,       'i' },
+		{ "header-id",  required_argument, 0,       'H' },
+		{ "robocore-key", required_argument, 0,      'k' },
 		{ "version",    required_argument, 0,       'v' },
 		{ "big",        no_argument,       &regType,  2 },
 		{ "pro",        no_argument,       &regType,  3 },
@@ -188,10 +219,24 @@ int main(int argc, char** argv)
 			regId = atoi(optarg);
 			if (regId < 0)
 			{
-				printf("inavlid id\r\n");
+				printf("invalid id\r\n");
 				exit(1);
 			}
 			break;
+		case 'H':
+			headerId = atoi(optarg);
+			if (headerId < 0 || headerId > 4)
+			{
+				printf("invalid header id\r\n");
+				exit(1);
+			}
+			break;
+		case 'k':
+		{
+			decodeKey(optarg, robocoreKey);
+			hasKey = true;
+			break;
+		}
 		case 'v':
 		{
 			vector<string> parts = splitString(optarg, ".");
@@ -212,17 +257,17 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (part count: %d)\r\n", (int)parts.size());
 				exit(1);
 			}
 			if (a < 0 || b < 0 || c < 0 || d < 0)
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (bad numbers)\r\n");
 				exit(1);
 			}
 			if (a + b + c + d == 0)
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (all zero)\r\n");
 				exit(1);
 			}
 
@@ -261,7 +306,8 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doUnprotect);
 	CHECK_USAGE(doHard && doDump);
 	CHECK_USAGE(doHard && doDumpEEPROM);
-	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
+	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1
+	            && headerId != -1 && hasKey);
 	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doHard && doFlashBootloader);
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
@@ -345,10 +391,10 @@ int main(int argc, char** argv)
 				}
 				else if (doRegister)
 				{
-					HardFlasher *hf = (HardFlasher*)flasher;
+					HardFlasher *hf = dynamic_cast<HardFlasher*>(flasher);
 
 					TRoboCOREHeader oldHeader;
-					hf->readHeader(oldHeader);
+					hf->readHeader(oldHeader, headerId);
 
 					if (!oldHeader.isClear())
 					{
@@ -364,8 +410,11 @@ int main(int argc, char** argv)
 					h.type = regType;
 					h.version = regVer;
 					h.id = regId;
-					h.key[0] = 0x00;
-					res = hf->writeHeader(h);
+					h.key[0] = 0x01;
+					memcpy(h.key + 1, robocoreKey, 16);
+					uint16_t crc = crc16_calc((uint8_t*)robocoreKey, 16);
+					memcpy(h.key + 17, &crc, 2);
+					res = hf->writeHeader(h, headerId);
 				}
 				else if (doFlash)
 				{

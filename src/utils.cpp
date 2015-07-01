@@ -2,7 +2,7 @@
 
 int log_debug = 0;
 
-uint16_t crc16_calc(uint8_t* data, int len)
+uint16_t crc16_calc(const uint8_t* data, int len)
 {
 	int i;
 
@@ -57,4 +57,3 @@ vector<string> splitString(const string& str, const string& delim, size_t maxCou
 
 	return parts;
 }
-

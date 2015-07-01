@@ -23,8 +23,8 @@ public:
     int dumpEmulatedEEPROM();
 	int setup();
 
-	int readHeader(TRoboCOREHeader& header);
-	int writeHeader(TRoboCOREHeader& header);
+	int readHeader(TRoboCOREHeader& header, int headerId);
+	int writeHeader(TRoboCOREHeader& header, int headerId);
 
 private:
 	stm32_dev_t m_dev;
