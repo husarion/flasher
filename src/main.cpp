@@ -400,7 +400,7 @@ int main(int argc, char** argv)
 					{
 						LOG_NICE("Already registered\r\n");
 						LOG_DEBUG("already registered");
-						break;
+						exit(1);
 					}
 
 					LOG_NICE("Registering...\r\n");
