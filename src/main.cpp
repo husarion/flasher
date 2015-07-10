@@ -473,7 +473,7 @@ int main(int argc, char** argv)
 						LOG_DEBUG("checking version... ");
 						TRoboCOREHeader h;
 						HardFlasher *hf = (HardFlasher*)flasher;
-						res = hf->readHeader(h);
+						res = hf->readHeader(h, 0);
 						if (h.isClear())
 						{
 							LOG_NICE("unable, device is unregistered, register it first.\r\n");
