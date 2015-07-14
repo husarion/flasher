@@ -27,14 +27,14 @@ using namespace std;
 int doHelp = 0;
 int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
-    doTest = 0;
+    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0;
 int regType = -1;
 int doConsole = 0;
 
 #define BEGIN_CHECK_USAGE() int found = 0; do {
 #define END_CHECK_USAGE() if (found != 1) { if (found > 1) warn1(); else warn2(); usage(argv); return 1; } } while (0);
 #define CHECK_USAGE(x) if(x) { found++; }
-#define CHECK_USAGE_NO_INC(x) if(x && found == 0) { found++; }
+#define CHECK_USAGE_NO_INC(x) if (x && found == 0) { found++; }
 
 uint32_t getTicks()
 {
@@ -62,6 +62,10 @@ void usage(char** argv)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Flashing bootloader:\n");
 	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Edison management:\n");
+	fprintf(stderr, "  %s --switch-to-edison connects FTDI to Edison debug port\n", argv[0]);
+	fprintf(stderr, "  %s --switch-to-stm    connects FTDI to STM32\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Other commands:\n");
 	fprintf(stderr, "  %s <other options>\n", argv[0]);
@@ -155,6 +159,9 @@ int main(int argc, char** argv)
 		{ "device",     required_argument, 0,       'd' },
 		{ "speed",      required_argument, 0,       's' },
 
+		{ "switch-to-edison", no_argument, &doSwitchEdison, 1 },
+		{ "switch-to-stm32",  no_argument, &doSwitchSTM32,  1 },
+
 		{ "usage",      no_argument,       &doHelp,   1 },
 		{ "help",       no_argument,       &doHelp,   1 },
 
@@ -234,13 +241,14 @@ int main(int argc, char** argv)
 
 	doHard = !doSoft;
 	doFlash = !doProtect && !doUnprotect && !doDump && !doDumpEEPROM && !doRegister &&
-	          !doSetup && !doFlashBootloader && !doTest;
+	          !doSetup && !doFlashBootloader && !doTest && !doSwitchEdison && !doSwitchSTM32;
 	if (doHelp)
 	{
 		usage(argv);
 		return 1;
 	}
-	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader + doTest > 1)
+	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader + 
+			doTest + doSwitchEdison + doSwitchSTM32 > 1)
 	{
 		warn1();
 		usage(argv);
@@ -265,10 +273,14 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doHard && doFlashBootloader);
 	CHECK_USAGE(doSoft && doFlash && device && filePath);
+	CHECK_USAGE(doSwitchEdison);
+	CHECK_USAGE(doSwitchSTM32);
 	CHECK_USAGE_NO_INC(doConsole);
 	END_CHECK_USAGE();
 
-	int openBootloader = doTest || doFlash || doProtect || doUnprotect || doDump || doDumpEEPROM || doRegister || doSetup || doFlashBootloader;
+	int openBootloader = doTest || doFlash || doProtect || doUnprotect ||
+	                     doDump || doDumpEEPROM || doRegister || doSetup || doFlashBootloader ||
+	                     doSwitchEdison || doSwitchSTM32;
 
 	if (openBootloader)
 	{
@@ -308,7 +320,8 @@ int main(int argc, char** argv)
 
 		while (true)
 		{
-			res = flasher->start();
+			bool initBootloader = !(doSwitchSTM32 || doSwitchEdison);
+			res = flasher->start(initBootloader);
 			if (res == 0)
 			{
 				uint32_t startTime = TimeUtilGetSystemTimeMs();
@@ -542,6 +555,30 @@ int main(int argc, char** argv)
 					}
 				}
 #endif
+				else if (doSwitchEdison)
+				{
+					LOG_NICE("Switching to Edison mode... ");
+					LOG_DEBUG("switching to Edison mode...");
+					HardFlasher *hf = (HardFlasher*)flasher;
+					int res = hf->switchToEdison();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+				}
+				else if (doSwitchSTM32)
+				{
+					LOG_NICE("Switching to STM32 mode... ");
+					LOG_DEBUG("switching to STM32 mode...");
+					HardFlasher *hf = (HardFlasher*)flasher;
+					int res = hf->switchToSTM32();
+					if (res != 0)
+					{
+						printf("\n");
+						continue;
+					}
+				}
 				break;
 			}
 			else if (res == -2)
@@ -551,7 +588,8 @@ int main(int argc, char** argv)
 			}
 		}
 
-		flasher->cleanup();
+		bool reset = !(doSwitchSTM32 || doSwitchEdison);
+		flasher->cleanup(reset);
 	}
 
 	if (doConsole)

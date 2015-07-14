@@ -24,11 +24,11 @@ public:
 	THexFile& getHexFile() { return m_hexFile; }
 
 	virtual int init() = 0;
-	virtual int start() = 0;
+	virtual int start(bool initBootloader = true) = 0;
 	virtual int erase() = 0;
 	virtual int flash() = 0;
 	virtual int reset() = 0;
-	virtual int cleanup() = 0;
+	virtual int cleanup(bool reset = true) = 0;
 
 	virtual int protect() = 0;
 	virtual int unprotect() = 0;

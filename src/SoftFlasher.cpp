@@ -26,7 +26,7 @@ int SoftFlasher::close()
 	XcpMasterDeinit();
 	return 0;
 }
-int SoftFlasher::start()
+int SoftFlasher::start(bool initBootloader)
 {
 	for (;;)
 	{

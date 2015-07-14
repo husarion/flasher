@@ -32,7 +32,7 @@ int HardFlasher::init()
 }
 int HardFlasher::open()
 {
-	close();
+	close(true);
 	bool res = uart_open(m_baudrate, false);
 	if (res)
 	{
@@ -87,17 +87,18 @@ int HardFlasher::open()
 		return -1;
 	}
 }
-int HardFlasher::close()
+int HardFlasher::close(bool reset)
 {
 	if (uart_is_opened())
 	{
-		uart_reset_normal();
+		if (reset)
+			uart_reset_normal();
 		uart_close();
 	}
 	return 0;
 }
 
-int HardFlasher::start()
+int HardFlasher::start(bool initBootloader)
 {
 	LOG_NICE("Connecting to RoboCORE...");
 
@@ -125,6 +126,9 @@ retry_uart_open:
 			break;
 		}
 	}
+
+	if (!initBootloader)
+		return 0;
 
 	// bootloader connecting loop
 	LOG_NICE("Connecting to bootloader..");
@@ -310,14 +314,14 @@ int HardFlasher::flash()
 }
 int HardFlasher::reset()
 {
-	close();
+	close(true);
 	LOG_NICE("OK\n");
 	LOG_DEBUG("OK");
 	return 0;
 }
-int HardFlasher::cleanup()
+int HardFlasher::cleanup(bool reset)
 {
-	close();
+	close(reset);
 	return 0;
 }
 
@@ -441,6 +445,18 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 	uint8_t d[] = { 0x00 };
 	writeMemory(OTP_LOCK, d, 1);
 
+	return 0;
+}
+int HardFlasher::switchToEdison()
+{
+	uart_switch_to_edison();
+	LOG_NICE("OK\n");
+	return 0;
+}
+int HardFlasher::switchToSTM32()
+{
+	uart_switch_to_stm32();
+	LOG_NICE("OK\n");
 	return 0;
 }
 

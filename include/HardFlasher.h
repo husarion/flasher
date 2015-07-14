@@ -11,26 +11,29 @@ class HardFlasher : public Flasher
 {
 public:
 	int init();
-	int start();
+	int start(bool initBootloader = true);
 	int erase();
 	int flash();
 	int reset();
-	int cleanup();
+	int cleanup(bool reset = true);
 
 	int protect();
 	int unprotect();
 	int dump();
-    int dumpEmulatedEEPROM();
+	int dumpEmulatedEEPROM();
 	int setup();
 
 	int readHeader(TRoboCOREHeader& header);
 	int writeHeader(TRoboCOREHeader& header);
 
+	int switchToEdison();
+	int switchToSTM32();
+
 private:
 	stm32_dev_t m_dev;
 
 	int open();
-	int close();
+	int close(bool reset);
 
 	// commands
 	int getVersion();
