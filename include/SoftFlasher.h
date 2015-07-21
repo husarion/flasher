@@ -7,11 +7,11 @@ class SoftFlasher : public Flasher
 {
 public:
 	int init();
-	int start();
+	int start(bool initBootloader = true);
 	int erase();
 	int flash();
 	int reset();
-	int cleanup() { return 0; }
+	int cleanup(bool reset = true) { return 0; }
 
 	int protect() { return -1; }
 	int unprotect() { return -1; }

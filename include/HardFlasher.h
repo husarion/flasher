@@ -11,26 +11,30 @@ class HardFlasher : public Flasher
 {
 public:
 	int init();
-	int start();
+	int start(bool initBootloader = true);
 	int erase();
 	int flash();
 	int reset();
-	int cleanup();
+	int cleanup(bool reset = true);
 
 	int protect();
 	int unprotect();
 	int dump();
-    int dumpEmulatedEEPROM();
+	int dumpEmulatedEEPROM();
+	int eraseEmulatedEEPROM();
 	int setup();
 
 	int readHeader(TRoboCOREHeader& header, int headerId);
 	int writeHeader(TRoboCOREHeader& header, int headerId);
 
+	int switchToEdison();
+	int switchToSTM32();
+
 private:
 	stm32_dev_t m_dev;
 
 	int open();
-	int close();
+	int close(bool reset);
 
 	// commands
 	int getVersion();
@@ -38,6 +42,7 @@ private:
 	int getID();
 	int readMemory(uint32_t addr, void* data, int len);
 	int writeMemory(uint32_t addr, const void* data, int len);
+	int erasePages(const vector<int>& pages);
 
 	// misc
 	void dumpOptionBytes();

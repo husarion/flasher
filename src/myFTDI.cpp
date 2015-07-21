@@ -12,8 +12,9 @@
 
 #include "utils.h"
 
-#define BOOT0 0
-#define RST   1
+#define BOOT0  0
+#define RST    1
+#define EDISON 3
 
 uint32_t getTicks();
 
@@ -25,7 +26,14 @@ int setPin(int pin, int value)
 {
 	vals &= ~(1 << pin);
 	vals |= (1 << (pin + 4)) | (value << pin);
-	LOG_DEBUG("setting pin values 0x%02x", vals);
+	const char *name;
+	switch (pin)
+	{
+	case BOOT0: name = "BOOT0"; break;
+	case RST: name = "RST"; break;
+	case EDISON: name = "EDISON"; break;
+	}
+	LOG_DEBUG("setting pin %s to %d (values 0x%02x)", name, value, vals);
 	return ftdi_set_bitmode(ftdi, vals, BITMODE_CBUS);
 }
 
@@ -74,11 +82,16 @@ int uart_check_gpio()
 	ftdi_eeprom_decode(ftdi, 0);
 	int p1 = ftdi->eeprom->cbus_function[0];
 	int p2 = ftdi->eeprom->cbus_function[1];
+	int p3 = ftdi->eeprom->cbus_function[2];
+	int p4 = ftdi->eeprom->cbus_function[3];
 	const int IOMODE = 8;
-	if (p1 != IOMODE || p2 != IOMODE)
+	const int KEEP_AWAKE = 21;
+	if (p1 != IOMODE || p2 != IOMODE || p3 != KEEP_AWAKE || p4 != IOMODE)
 	{
 		ftdi->eeprom->cbus_function[0] = IOMODE;
 		ftdi->eeprom->cbus_function[1] = IOMODE;
+		ftdi->eeprom->cbus_function[2] = KEEP_AWAKE;
+		ftdi->eeprom->cbus_function[3] = IOMODE;
 		ftdi_eeprom_build(ftdi);
 		ftdi_write_eeprom(ftdi);
 		return 1;
@@ -89,6 +102,7 @@ int uart_reset_boot()
 {
 	LOG_DEBUG("resetting to bootloader mode...");
 	setPin(BOOT0, 1);
+	setPin(EDISON, 0);
 	usleep(10000);
 	setPin(RST, 1);
 	usleep(100000);
@@ -104,6 +118,22 @@ int uart_reset_boot()
 #else
 	ftdi_set_baudrate(ftdi, speed);
 #endif
+	return 0;
+}
+int uart_switch_to_edison()
+{
+	LOG_DEBUG("setting pins for Edison mode...");
+	setPin(BOOT0, 0);
+	setPin(EDISON, 1);
+	setPin(RST, 1);
+	return 0;
+}
+int uart_switch_to_stm32()
+{
+	LOG_DEBUG("setting pins for STM32 mode...");
+	setPin(BOOT0, 0);
+	setPin(EDISON, 0);
+	setPin(RST, 0);
 	return 0;
 }
 bool uart_is_opened()
@@ -155,6 +185,7 @@ void uart_reset_normal()
 {
 	LOG_DEBUG("resetting to normal mode...");
 	setPin(BOOT0, 0);
+	setPin(EDISON, 0);
 	usleep(10000);
 	setPin(RST, 1);
 	usleep(100000);
