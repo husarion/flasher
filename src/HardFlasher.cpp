@@ -182,92 +182,36 @@ retry_uart_open:
 }
 int HardFlasher::erase()
 {
-	int res;
+	map<int, int> pages;
 
-	if (m_dev.cmds[ERASE] == 0x44)
+	// TODO: optimize
+	for (int i = 0; i < (int)m_hexFile.parts.size(); i++)
 	{
-		// printf("Erasing device with Extended Erase command\n");
-
-		uart_send_cmd(0x44);
-		res = uart_read_ack_nack();
-		if (res != ACK)
+		TPart* part = m_hexFile.parts[i];
+		for (uint32_t addr = part->getStartAddr(); addr <= part->getEndAddr(); addr += 256)
 		{
-			LOG_NICE("ERROR\n");
-			LOG_DEBUG("erase not ack'ed");
-			// printf("Erase NACK'ed\n");
-			return -1;
-		}
-
-		// printf("Erase ACK'ed\n");
-
-		map<int, int> pages;
-
-		// TODO: optimize
-		for (int i = 0; i < (int)m_hexFile.parts.size(); i++)
-		{
-			TPart* part = m_hexFile.parts[i];
-			for (uint32_t addr = part->getStartAddr(); addr <= part->getEndAddr(); addr += 256)
+			for (int j = 0; j < flashPages; j++)
 			{
-				for (int j = 0; j < flashPages; j++)
+				if (addr >= flashLayout[j].sector_start && addr <= flashLayout[j].sector_start + flashLayout[j].sector_size - 1)
 				{
-					if (addr >= flashLayout[j].sector_start && addr <= flashLayout[j].sector_start + flashLayout[j].sector_size - 1)
-					{
-						pages[flashLayout[j].sector_num] = 1;
-					}
+					pages[flashLayout[j].sector_num] = 1;
 				}
 			}
 		}
-
-		int pagesToEraseCnt = pages.size();
-
-		uint8_t data[2 + pagesToEraseCnt * 2];
-		data[0] = (pagesToEraseCnt - 1) >> 8;
-		data[1] = (pagesToEraseCnt - 1) & 0xff;
-		int idx = 0;
-		for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
-		{
-			int pageNr = it->first;
-			LOG_NICE("%d ", pageNr);
-			LOG_DEBUG("page %d", pageNr);
-			data[2 + idx * 2] = pageNr >> 8;
-			data[2 + idx * 2 + 1] = pageNr & 0xff;
-			idx++;
-		}
-
-		uart_write_data_checksum(data, sizeof(data));
-
-		res = uart_read_ack_nack(40000);
-		if (res == ACK)
-		{
-			LOG_NICE("OK\n");
-			LOG_DEBUG("mass Erase ACK'ed");
-			return 0;
-		}
-		else if (res == NACK)
-		{
-			LOG_NICE("ERROR\n");
-			LOG_DEBUG("mass Erase NACK'ed");
-			return -1;
-		}
-		else
-		{
-			LOG_NICE("ERROR\n");
-			LOG_DEBUG("timeout");
-			return -1;
-		}
 	}
-	else if (m_dev.cmds[ERASE] == 0x43)
-	{
-		LOG_NICE("ERROR\n");
-		LOG_DEBUG("ERROR");
-		return -1; // not supported
-	}
-	else
-	{
-		LOG_NICE("ERROR (unknown command)\n");
-		LOG_DEBUG("ERROR (unknown command)");
-		return -2;
-	}
+
+	vector<int> pagesV;
+	for (map<int, int>::iterator it = pages.begin(); it != pages.end(); it++)
+		pagesV.push_back(it->first);
+
+	return erasePages(pagesV);
+}
+int HardFlasher::eraseEmulatedEEPROM()
+{
+	vector<int> pagesV;
+	pagesV.push_back(2);
+	pagesV.push_back(3);
+	return erasePages(pagesV);
 }
 int HardFlasher::flash()
 {
@@ -431,7 +375,7 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 
 	writeMemory(OTP_BASE, &header, sizeof(header));
 	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
-	       header.headerVersion, header.type, header.version, header.id);
+			header.headerVersion, header.type, header.version, header.id);
 
 	uint8_t data[sizeof(header)];
 	readMemory(OTP_BASE, data, sizeof(header));
@@ -654,6 +598,75 @@ int HardFlasher::writeMemory(uint32_t addr, const void* data, int len)
 	}
 
 	return 0;
+}
+int HardFlasher::erasePages(const vector<int>& pages)
+{
+	int res;
+
+	if (m_dev.cmds[ERASE] == 0x44)
+	{
+		// printf("Erasing device with Extended Erase command\n");
+
+		uart_send_cmd(0x44);
+		res = uart_read_ack_nack();
+		if (res != ACK)
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("erase not ack'ed");
+			// printf("Erase NACK'ed\n");
+			return -1;
+		}
+
+		int pagesToEraseCnt = pages.size();
+
+		uint8_t data[2 + pagesToEraseCnt * 2];
+		data[0] = (pagesToEraseCnt - 1) >> 8;
+		data[1] = (pagesToEraseCnt - 1) & 0xff;
+		int idx = 0;
+		for (vector<int>::const_iterator it = pages.begin(); it != pages.end(); it++)
+		{
+			int pageNr = *it;
+			LOG_NICE("%d ", pageNr);
+			LOG_DEBUG("page %d", pageNr);
+			data[2 + idx * 2] = pageNr >> 8;
+			data[2 + idx * 2 + 1] = pageNr & 0xff;
+			idx++;
+		}
+
+		uart_write_data_checksum(data, sizeof(data));
+
+		res = uart_read_ack_nack(40000);
+		if (res == ACK)
+		{
+			LOG_NICE("OK\n");
+			LOG_DEBUG("mass Erase ACK'ed");
+			return 0;
+		}
+		else if (res == NACK)
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("mass Erase NACK'ed");
+			return -1;
+		}
+		else
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("timeout");
+			return -1;
+		}
+	}
+	else if (m_dev.cmds[ERASE] == 0x43)
+	{
+		LOG_NICE("ERROR\n");
+		LOG_DEBUG("ERROR");
+		return -1; // not supported
+	}
+	else
+	{
+		LOG_NICE("ERROR (unknown command)\n");
+		LOG_DEBUG("ERROR (unknown command)");
+		return -2;
+	}
 }
 
 // misc

@@ -21,6 +21,7 @@ public:
 	int unprotect();
 	int dump();
 	int dumpEmulatedEEPROM();
+	int eraseEmulatedEEPROM();
 	int setup();
 
 	int readHeader(TRoboCOREHeader& header);
@@ -41,6 +42,7 @@ private:
 	int getID();
 	int readMemory(uint32_t addr, void* data, int len);
 	int writeMemory(uint32_t addr, const void* data, int len);
+	int erasePages(const vector<int>& pages);
 
 	// misc
 	void dumpOptionBytes();

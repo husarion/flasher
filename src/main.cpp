@@ -27,7 +27,7 @@ using namespace std;
 int doHelp = 0;
 int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
-    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0;
+    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doEraseEEPROM = 0;
 int regType = -1;
 int doConsole = 0;
 
@@ -80,6 +80,7 @@ void usage(char** argv)
 	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
 	fprintf(stderr, "       --dump           dumps device info (only valid with --hard)\n");
 	fprintf(stderr, "       --dump-eeprom    dumps emulated EEPROM content (only valid with --hard)\n");
+	fprintf(stderr, "       --erase-eeprom   erases emulated EEPROM content (only valid with --hard)\n");
 	fprintf(stderr, "       --debug          show debug messages\n");
 }
 
@@ -147,7 +148,8 @@ int main(int argc, char** argv)
 		{ "unprotect",  no_argument,       &doUnprotect, 1 },
 		{ "protect",    no_argument,       &doProtect,   1 },
 		{ "dump",       no_argument,       &doDump,      1 },
-		{ "dump-eeprom",no_argument,       &doDumpEEPROM,1 },
+		{ "dump-eeprom",  no_argument,     &doDumpEEPROM,1 },
+		{ "erase-eeprom", no_argument,     &doEraseEEPROM, 1 },
 		{ "setup",      no_argument,       &doSetup,     1 },
 		{ "register",   no_argument,       &doRegister,  1 },
 
@@ -241,14 +243,14 @@ int main(int argc, char** argv)
 
 	doHard = !doSoft;
 	doFlash = !doProtect && !doUnprotect && !doDump && !doDumpEEPROM && !doRegister &&
-	          !doSetup && !doFlashBootloader && !doTest && !doSwitchEdison && !doSwitchSTM32;
+	          !doSetup && !doFlashBootloader && !doTest && !doSwitchEdison && !doSwitchSTM32 && !doEraseEEPROM;
 	if (doHelp)
 	{
 		usage(argv);
 		return 1;
 	}
 	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader + 
-			doTest + doSwitchEdison + doSwitchSTM32 > 1)
+			doTest + doSwitchEdison + doSwitchSTM32 + doEraseEEPROM > 1)
 	{
 		warn1();
 		usage(argv);
@@ -269,6 +271,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doHard && doUnprotect);
 	CHECK_USAGE(doHard && doDump);
 	CHECK_USAGE(doHard && doDumpEEPROM);
+	CHECK_USAGE(doHard && doEraseEEPROM);
 	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
 	CHECK_USAGE(doHard && doSetup);
 	CHECK_USAGE(doHard && doFlashBootloader);
@@ -280,7 +283,7 @@ int main(int argc, char** argv)
 
 	int openBootloader = doTest || doFlash || doProtect || doUnprotect ||
 	                     doDump || doDumpEEPROM || doRegister || doSetup || doFlashBootloader ||
-	                     doSwitchEdison || doSwitchSTM32;
+	                     doSwitchEdison || doSwitchSTM32 || doEraseEEPROM;
 
 	if (openBootloader)
 	{
@@ -349,6 +352,12 @@ int main(int argc, char** argv)
 					LOG_NICE("Dumping info...\r\n");
 					LOG_DEBUG("dumping info...");
 					res = flasher->dumpEmulatedEEPROM();
+				}
+				else if (doEraseEEPROM)
+				{
+					LOG_NICE("Erasing info...\r\n");
+					LOG_DEBUG("Erasing info...");
+					res = flasher->eraseEmulatedEEPROM();
 				}
 				else if (doSetup)
 				{
