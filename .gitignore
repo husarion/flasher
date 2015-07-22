@@ -12,3 +12,4 @@ flasher
 main.bin
 flasher_hard
 gen/
+/build/

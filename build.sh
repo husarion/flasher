@@ -5,11 +5,11 @@ fi
 
 ./gen_bootloader_files.sh
 
-rm -f CMakeCache.txt
-cmake -DEMBED_BOOTLOADERS=1 . && make
+mkcd() {
+    mkdir -p "$1"
+    cd "$1"
+}
 
-rm -f CMakeCache.txt
-cmake -DEMBED_BOOTLOADERS=1 -DX86=1 . && make
-
-rm -f CMakeCache.txt
-cmake -DEMBED_BOOTLOADERS=1 -DWIN32=1 -DCROSS=1 . && make
+(mkcd build/amd64-linux && cmake -DEMBED_BOOTLOADERS=1 ../.. && make)
+(mkcd build/i386-linux && cmake -DEMBED_BOOTLOADERS=1 -DX86=1 ../.. && make)
+(mkcd build/win && cmake -DEMBED_BOOTLOADERS=1 -DWIN32=1 -DCROSS=1 ../.. && make)
