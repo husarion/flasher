@@ -3,8 +3,6 @@ get_filename_component(CURRENT_DIR ${CMAKE_CURRENT_LIST_FILE} PATH) # for cmake 
 
 project(flasher_hard C CXX ASM)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-
 if(CROSS)
 	set(CMAKE_C_COMPILER "i686-w64-mingw32-gcc")
 	set(CMAKE_CXX_COMPILER "i686-w64-mingw32-g++")
@@ -44,9 +42,9 @@ endif()
 
 if(WIN32)
 	if(CROSS)
-		set(TARGET_NAME flasher.exe)
+        set(TARGET_NAME robocore-flasher.exe)
 	else()
-		set(TARGET_NAME flasher)
+        set(TARGET_NAME robocore-flasher)
 	endif()
 
 	add_executable(${TARGET_NAME}
@@ -59,24 +57,20 @@ if(WIN32)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")
 	add_custom_command(TARGET copy
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_SOURCE_DIR}/bin/)
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_BINARY_DIR})
 	add_custom_command(TARGET copy
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_SOURCE_DIR}/bin/)
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_BINARY_DIR})
 
 	if(CROSS)
 		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_SOURCE_DIR}/bin/)
+            COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_BINARY_DIR})
 		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+            COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_BINARY_DIR})
 		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_SOURCE_DIR}/bin/)
+            COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_BINARY_DIR})
 	endif()
 elseif(UNIX)
-	if(X86)
-		set(TARGET_NAME flasher_32)
-	else()
-		set(TARGET_NAME flasher)
-	endif()
+    set(TARGET_NAME robocore-flasher)
 	add_definitions(-DUNIX)
 
 	add_executable(${TARGET_NAME}
