@@ -11,6 +11,7 @@
 #include <ftdi_i.h>
 
 #include "utils.h"
+#include "timeutil.h"
 
 #define BOOT0  0
 #define RST    1
@@ -75,7 +76,65 @@ bool uart_open(int speed, bool showErrors)
 
 	return ftdi;
 }
-int uart_check_gpio()
+
+bool uart_open_with_config(int speed, const gpio_config_t& config, bool showErrors)
+{
+	bool res = uart_open(speed, showErrors);
+	if (res)
+	{
+		LOG_NICE(" OK\r\n");
+		LOG_NICE("Checking settings... ");
+		int r = uart_set_gpio_config(config);
+		if (r)
+		{
+			uart_close();
+			LOG_NICE(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
+			LOG_NICE("Unplug RoboCORE.");
+			bool restarted = false;
+			for (;;)
+			{
+				if (!restarted)
+				{
+					res = uart_open(speed, showErrors);
+					if (!res)
+					{
+						restarted = true;
+						LOG_NICE(" OK, plug it again.");
+					}
+					else
+					{
+						uart_close();
+					}
+				}
+				else
+				{
+					res = uart_open(speed, showErrors);
+					if (res)
+						break;
+				}
+				TimeUtilDelayMs(10);
+				static int cnt = 0;
+				if (cnt++ == 15)
+				{
+					LOG_NICE(".");
+					cnt = 0;
+				}
+			}
+			LOG_NICE(" OK\r\n");
+		}
+		else
+		{
+			LOG_NICE(" OK\r\n");
+		}
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+int uart_set_gpio_config(const gpio_config_t& config)
 {
 	LOG_DEBUG("checking gpio config");
 	ftdi_read_eeprom(ftdi);
@@ -84,14 +143,12 @@ int uart_check_gpio()
 	int p2 = ftdi->eeprom->cbus_function[1];
 	int p3 = ftdi->eeprom->cbus_function[2];
 	int p4 = ftdi->eeprom->cbus_function[3];
-	const int IOMODE = 8;
-	const int KEEP_AWAKE = 21;
-	if (p1 != IOMODE || p2 != IOMODE || p3 != KEEP_AWAKE || p4 != IOMODE)
+	if (p1 != config.cbus0 || p2 != config.cbus1 || p3 != config.cbus2 || p4 != config.cbus3)
 	{
-		ftdi->eeprom->cbus_function[0] = IOMODE;
-		ftdi->eeprom->cbus_function[1] = IOMODE;
-		ftdi->eeprom->cbus_function[2] = KEEP_AWAKE;
-		ftdi->eeprom->cbus_function[3] = IOMODE;
+		ftdi->eeprom->cbus_function[0] = config.cbus0;
+		ftdi->eeprom->cbus_function[1] = config.cbus1;
+		ftdi->eeprom->cbus_function[2] = config.cbus2;
+		ftdi->eeprom->cbus_function[3] = config.cbus3;
 		ftdi_eeprom_build(ftdi);
 		ftdi_write_eeprom(ftdi);
 		return 1;
@@ -123,17 +180,39 @@ int uart_reset_boot()
 int uart_switch_to_edison()
 {
 	LOG_DEBUG("setting pins for Edison mode...");
+	gpio_config_t config;
+	config.cbus0 = IOMODE;
+	config.cbus1 = IOMODE;
+	config.cbus2 = KEEP_AWAKE;
+	config.cbus3 = DRIVE_1;
+	int res = uart_open_with_config(115200, config, false);
+	if (res)
+		return -1;
+
 	setPin(BOOT0, 0);
-	setPin(EDISON, 1);
-	setPin(RST, 1);
+	setPin(RST, 0);
+
+	uart_close();
+
 	return 0;
 }
 int uart_switch_to_stm32()
 {
 	LOG_DEBUG("setting pins for STM32 mode...");
+	gpio_config_t config;
+	config.cbus0 = IOMODE;
+	config.cbus1 = IOMODE;
+	config.cbus2 = KEEP_AWAKE;
+	config.cbus3 = DRIVE_0;
+	int res = uart_open_with_config(115200, config, false);
+	if (res)
+		return -1;
+
 	setPin(BOOT0, 0);
-	setPin(EDISON, 0);
 	setPin(RST, 0);
+
+	uart_close();
+
 	return 0;
 }
 bool uart_is_opened()

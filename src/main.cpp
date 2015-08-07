@@ -10,12 +10,11 @@
 
 #include "TRoboCOREHeader.h"
 #include "timeutil.h"
-#include "Flasher.h"
 #include "HardFlasher.h"
-#include "SoftFlasher.h"
 #include "utils.h"
 #include "console.h"
 #include "signal.h"
+#include "myFTDI.h"
 
 #ifdef EMBED_BOOTLOADERS
 #include "bootloaders.h"
@@ -25,7 +24,7 @@
 using namespace std;
 
 int doHelp = 0;
-int doSoft = 0, doHard = 0, doUnprotect = 0, doProtect = 0, doFlash = 0,
+int doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
     doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doEraseEEPROM = 0;
 int regType = -1;
@@ -57,8 +56,7 @@ void usage(char** argv)
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Flashing RoboCORE:\n");
-	fprintf(stderr, "  %s [--hard] [--speed speed] file.hex\n", argv[0]);
-	fprintf(stderr, "  %s --soft --device /dev/ttyUSB0 file.hex\n", argv[0]);
+	fprintf(stderr, "  %s [--speed speed] file.hex\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Flashing bootloader:\n");
 	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
@@ -127,7 +125,6 @@ static void sigHandler(int)
 int main(int argc, char** argv)
 {
 	int speed = -1;
-	const char* device = 0;
 	int res;
 	int regId = -1;
 	uint32_t regVer = 0xffffffff;
@@ -137,9 +134,6 @@ int main(int argc, char** argv)
 
 	static struct option long_options[] =
 	{
-		{ "soft",       no_argument,       &doSoft,   1 },
-		{ "hard",       no_argument,       &doHard,   1 },
-
 		{ "test",       no_argument,       &doTest ,  1 },
 		{ "flash",      no_argument,       &doFlash,  1 },
 #ifdef EMBED_BOOTLOADERS
@@ -148,7 +142,7 @@ int main(int argc, char** argv)
 		{ "unprotect",  no_argument,       &doUnprotect, 1 },
 		{ "protect",    no_argument,       &doProtect,   1 },
 		{ "dump",       no_argument,       &doDump,      1 },
-		{ "dump-eeprom",  no_argument,     &doDumpEEPROM,1 },
+		{ "dump-eeprom",  no_argument,     &doDumpEEPROM, 1 },
 		{ "erase-eeprom", no_argument,     &doEraseEEPROM, 1 },
 		{ "setup",      no_argument,       &doSetup,     1 },
 		{ "register",   no_argument,       &doRegister,  1 },
@@ -158,7 +152,6 @@ int main(int argc, char** argv)
 		{ "big",        no_argument,       &regType,  2 },
 		{ "pro",        no_argument,       &regType,  3 },
 
-		{ "device",     required_argument, 0,       'd' },
 		{ "speed",      required_argument, 0,       's' },
 
 		{ "switch-to-edison", no_argument, &doSwitchEdison, 1 },
@@ -184,9 +177,6 @@ int main(int argc, char** argv)
 		{
 		case 'h':
 			doHelp = 1;
-			break;
-		case 'd':
-			device = optarg;
 			break;
 		case 's':
 			speed = atoi(optarg);
@@ -241,7 +231,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	doHard = !doSoft;
 	doFlash = !doProtect && !doUnprotect && !doDump && !doDumpEEPROM && !doRegister &&
 	          !doSetup && !doFlashBootloader && !doTest && !doSwitchEdison && !doSwitchSTM32 && !doEraseEEPROM;
 	if (doHelp)
@@ -249,8 +238,8 @@ int main(int argc, char** argv)
 		usage(argv);
 		return 1;
 	}
-	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader + 
-			doTest + doSwitchEdison + doSwitchSTM32 + doEraseEEPROM > 1)
+	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader +
+	    doTest + doSwitchEdison + doSwitchSTM32 + doEraseEEPROM > 1)
 	{
 		warn1();
 		usage(argv);
@@ -265,17 +254,16 @@ int main(int argc, char** argv)
 		doFlash = 0;
 
 	BEGIN_CHECK_USAGE();
-	CHECK_USAGE(doHard && doTest);
-	CHECK_USAGE(doHard && doFlash && filePath);
-	CHECK_USAGE(doHard && doProtect);
-	CHECK_USAGE(doHard && doUnprotect);
-	CHECK_USAGE(doHard && doDump);
-	CHECK_USAGE(doHard && doDumpEEPROM);
-	CHECK_USAGE(doHard && doEraseEEPROM);
-	CHECK_USAGE(doHard && doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
-	CHECK_USAGE(doHard && doSetup);
-	CHECK_USAGE(doHard && doFlashBootloader);
-	CHECK_USAGE(doSoft && doFlash && device && filePath);
+	CHECK_USAGE(doTest);
+	CHECK_USAGE(doFlash && filePath);
+	CHECK_USAGE(doProtect);
+	CHECK_USAGE(doUnprotect);
+	CHECK_USAGE(doDump);
+	CHECK_USAGE(doDumpEEPROM);
+	CHECK_USAGE(doEraseEEPROM);
+	CHECK_USAGE(doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
+	CHECK_USAGE(doSetup);
+	CHECK_USAGE(doFlashBootloader);
 	CHECK_USAGE(doSwitchEdison);
 	CHECK_USAGE(doSwitchSTM32);
 	CHECK_USAGE_NO_INC(doConsole);
@@ -283,25 +271,15 @@ int main(int argc, char** argv)
 
 	int openBootloader = doTest || doFlash || doProtect || doUnprotect ||
 	                     doDump || doDumpEEPROM || doRegister || doSetup || doFlashBootloader ||
-	                     doSwitchEdison || doSwitchSTM32 || doEraseEEPROM;
+	                     doEraseEEPROM;
 
 	if (openBootloader)
 	{
-		Flasher *flasher = 0;
-		if (doHard)
-		{
-			flasher = new HardFlasher();
-			int s = speed;
-			if (s == -1)
-				s = 460800;
-			flasher->setBaudrate(s);
-		}
-		if (doSoft)
-		{
-			flasher = new SoftFlasher();
-			flasher->setBaudrate(460800);
-			flasher->setDevice(device);
-		}
+		HardFlasher *flasher = new HardFlasher();
+		int s = speed;
+		if (s == -1)
+			s = 460800;
+		flasher->setBaudrate(s);
 		flasher->setCallback(&callback);
 		if (doFlash)
 		{
@@ -391,15 +369,12 @@ int main(int argc, char** argv)
 				}
 				else if (doFlash)
 				{
-					if (doHard)
+					LOG_NICE("Checking configuration... ");
+					LOG_DEBUG("checking configuration...");
+					res = flasher->setup();
+					if (res != 0)
 					{
-						LOG_NICE("Checking configuration... ");
-						LOG_DEBUG("checking configuration...");
-						res = flasher->setup();
-						if (res != 0)
-						{
-							continue;
-						}
+						continue;
 					}
 
 					LOG_NICE("Erasing device... ");
@@ -564,30 +539,6 @@ int main(int argc, char** argv)
 					}
 				}
 #endif
-				else if (doSwitchEdison)
-				{
-					LOG_NICE("Switching to Edison mode... ");
-					LOG_DEBUG("switching to Edison mode...");
-					HardFlasher *hf = (HardFlasher*)flasher;
-					int res = hf->switchToEdison();
-					if (res != 0)
-					{
-						printf("\n");
-						continue;
-					}
-				}
-				else if (doSwitchSTM32)
-				{
-					LOG_NICE("Switching to STM32 mode... ");
-					LOG_DEBUG("switching to STM32 mode...");
-					HardFlasher *hf = (HardFlasher*)flasher;
-					int res = hf->switchToSTM32();
-					if (res != 0)
-					{
-						printf("\n");
-						continue;
-					}
-				}
 				break;
 			}
 			else if (res == -2)
@@ -599,6 +550,28 @@ int main(int argc, char** argv)
 
 		bool reset = !(doSwitchSTM32 || doSwitchEdison);
 		flasher->cleanup(reset);
+	}
+	else if (doSwitchEdison)
+	{
+		LOG_NICE("Switching to Edison mode... ");
+		LOG_DEBUG("switching to Edison mode...");
+		int res = uart_switch_to_edison();
+		if (res != 0)
+		{
+			printf("\n");
+			return 1;
+		}
+	}
+	else if (doSwitchSTM32)
+	{
+		LOG_NICE("Switching to STM32 mode... ");
+		LOG_DEBUG("switching to STM32 mode...");
+		int res = uart_switch_to_stm32();
+		if (res != 0)
+		{
+			printf("\n");
+			return 1;
+		}
 	}
 
 	if (doConsole)

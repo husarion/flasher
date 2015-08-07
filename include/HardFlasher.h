@@ -1,15 +1,29 @@
 #ifndef __HARDFLASHER_H__
 #define __HARDFLASHER_H__
 
-#include "Flasher.h"
+#include <string>
+
+using namespace std;
 
 #include "devices.h"
 #include "myFTDI.h"
 #include "TRoboCOREHeader.h"
+#include "ihex.h"
 
-class HardFlasher : public Flasher
+typedef void (*ProgressCallback)(uint32_t current, uint32_t total);
+
+class HardFlasher
 {
 public:
+	int load(const string& path);
+	int loadData(const char* data);
+
+	void setDevice(const string& device) { m_device = device; }
+	void setBaudrate(int baudrate) { m_baudrate = baudrate; }
+	void setCallback(ProgressCallback callback) { m_callback = callback; }
+
+	THexFile& getHexFile() { return m_hexFile; }
+
 	int init();
 	int start(bool initBootloader = true);
 	int erase();
@@ -27,11 +41,12 @@ public:
 	int readHeader(TRoboCOREHeader& header);
 	int writeHeader(TRoboCOREHeader& header);
 
-	int switchToEdison();
-	int switchToSTM32();
-
 private:
 	stm32_dev_t m_dev;
+	THexFile m_hexFile;
+	string m_device;
+	int m_baudrate;
+	ProgressCallback m_callback;
 
 	int open();
 	int close(bool reset);

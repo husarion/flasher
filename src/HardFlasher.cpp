@@ -26,6 +26,15 @@ uint32_t SWAP32(uint32_t v)
 	       ((v & 0x00ff0000) >> 8) | ((v & 0xff000000) >> 24);
 }
 
+int HardFlasher::load(const string& path)
+{
+	return m_hexFile.load(path) ? 0 : -1;
+}
+int HardFlasher::loadData(const char* data)
+{
+	return m_hexFile.loadData(data) ? 0 : -1;
+}
+
 int HardFlasher::init()
 {
 	return 0;
@@ -33,59 +42,12 @@ int HardFlasher::init()
 int HardFlasher::open()
 {
 	close(true);
-	bool res = uart_open(m_baudrate, false);
-	if (res)
-	{
-		LOG_NICE(" OK\r\n");
-		LOG_NICE("Checking settings... ");
-		int r = uart_check_gpio();
-		if (r)
-		{
-			uart_close();
-			LOG_NICE(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
-			LOG_NICE("Unplug RoboCORE.");
-			bool restarted = false;
-			for (;;)
-			{
-				if (!restarted)
-				{
-					res = uart_open(m_baudrate, false);
-					if (!res)
-					{
-						restarted = true;
-						LOG_NICE(" OK, plug it again.");
-					}
-					else
-					{
-						uart_close();
-					}
-				}
-				else
-				{
-					res = uart_open(m_baudrate, false);
-					if (res)
-						break;
-				}
-				TimeUtilDelayMs(10);
-				static int cnt = 0;
-				if (cnt++ == 15)
-				{
-					LOG_NICE(".");
-					cnt = 0;
-				}
-			}
-			LOG_NICE(" OK\r\n");
-		}
-		else
-		{
-			LOG_NICE(" OK\r\n");
-		}
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
+	gpio_config_t config;
+	config.cbus0 = IOMODE;
+	config.cbus1 = IOMODE;
+	config.cbus2 = KEEP_AWAKE;
+	config.cbus3 = DRIVE_0;
+	return uart_open_with_config(m_baudrate, config, false);
 }
 int HardFlasher::close(bool reset)
 {
@@ -389,18 +351,6 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header)
 	uint8_t d[] = { 0x00 };
 	writeMemory(OTP_LOCK, d, 1);
 
-	return 0;
-}
-int HardFlasher::switchToEdison()
-{
-	uart_switch_to_edison();
-	LOG_NICE("OK\n");
-	return 0;
-}
-int HardFlasher::switchToSTM32()
-{
-	uart_switch_to_stm32();
-	LOG_NICE("OK\n");
 	return 0;
 }
 
