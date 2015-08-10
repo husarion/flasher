@@ -73,12 +73,12 @@ void usage(char** argv)
 	fprintf(stderr, "       --test           tests connection to RoboCORE\n");
 	fprintf(stderr, "       --setup          setup option bits\n");
 	fprintf(stderr, "       --protect        protects bootloader against\n");
-	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
+	fprintf(stderr, "                        unintended modifications\n");
 	fprintf(stderr, "       --unprotect      unprotects bootloader against\n");
-	fprintf(stderr, "                        unintended modifications (only valid with --hard)\n");
-	fprintf(stderr, "       --dump           dumps device info (only valid with --hard)\n");
-	fprintf(stderr, "       --dump-eeprom    dumps emulated EEPROM content (only valid with --hard)\n");
-	fprintf(stderr, "       --erase-eeprom   erases emulated EEPROM content (only valid with --hard)\n");
+	fprintf(stderr, "                        unintended modifications\n");
+	fprintf(stderr, "       --dump           dumps device info\n");
+	fprintf(stderr, "       --dump-eeprom    dumps emulated EEPROM content\n");
+	fprintf(stderr, "       --erase-eeprom   erases emulated EEPROM content\n");
 	fprintf(stderr, "       --debug          show debug messages\n");
 }
 
@@ -231,33 +231,26 @@ int main(int argc, char** argv)
 		}
 	}
 
-	doFlash = !doProtect && !doUnprotect && !doDump && !doDumpEEPROM && !doRegister &&
-	          !doSetup && !doFlashBootloader && !doTest && !doSwitchEdison && !doSwitchSTM32 && !doEraseEEPROM;
+	const char* filePath = 0;
+	if (optind < argc)
+		filePath = argv[optind];
+
+	doFlash = !!filePath;
 	if (doHelp)
 	{
 		usage(argv);
 		return 1;
 	}
-	if (doFlash + doProtect + doUnprotect + doDump + doDumpEEPROM + doRegister + doSetup + doFlashBootloader +
-	    doTest + doSwitchEdison + doSwitchSTM32 + doEraseEEPROM > 1)
-	{
-		warn1();
-		usage(argv);
-		return 1;
-	}
-
-	const char* filePath = 0;
-	if (optind < argc)
-		filePath = argv[optind];
 
 	if (doFlash && doConsole && !filePath)
 		doFlash = 0;
 
 	BEGIN_CHECK_USAGE();
 	CHECK_USAGE(doTest);
-	CHECK_USAGE(doFlash && filePath);
-	CHECK_USAGE(doProtect);
-	CHECK_USAGE(doUnprotect);
+	CHECK_USAGE(!doProtect && !doUnprotect && doFlash);
+	CHECK_USAGE((doProtect || doUnprotect) && doFlash);
+	CHECK_USAGE(doProtect && !doFlash);
+	CHECK_USAGE(doUnprotect && !doFlash);
 	CHECK_USAGE(doDump);
 	CHECK_USAGE(doDumpEEPROM);
 	CHECK_USAGE(doEraseEEPROM);
@@ -299,6 +292,7 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
+		bool unprotectDone = false;
 		while (true)
 		{
 			bool initBootloader = !(doSwitchSTM32 || doSwitchEdison);
@@ -307,43 +301,39 @@ int main(int argc, char** argv)
 			{
 				uint32_t startTime = TimeUtilGetSystemTimeMs();
 
-				if (doProtect)
-				{
-					LOG_NICE("Protecting bootloader... ");
-					LOG_DEBUG("protecting bootloader...");
-					res = flasher->protect();
-				}
-				else if (doUnprotect)
+				if (doUnprotect && !unprotectDone)
 				{
 					LOG_NICE("Unprotecting bootloader... ");
 					LOG_DEBUG("unprotecting bootloader...");
 					res = flasher->unprotect();
+					unprotectDone = true;
+					continue;
 				}
-				else if (doDump)
+				if (doDump)
 				{
 					LOG_NICE("Dumping info...\r\n");
 					LOG_DEBUG("dumping info...");
 					res = flasher->dump();
 				}
-				else if (doDumpEEPROM)
+				if (doDumpEEPROM)
 				{
 					LOG_NICE("Dumping info...\r\n");
 					LOG_DEBUG("dumping info...");
 					res = flasher->dumpEmulatedEEPROM();
 				}
-				else if (doEraseEEPROM)
+				if (doEraseEEPROM)
 				{
 					LOG_NICE("Erasing info...\r\n");
 					LOG_DEBUG("Erasing info...");
 					res = flasher->eraseEmulatedEEPROM();
 				}
-				else if (doSetup)
+				if (doSetup)
 				{
 					LOG_NICE("Checking configuration... ");
 					LOG_DEBUG("checking configuration...");
 					res = flasher->setup();
 				}
-				else if (doRegister)
+				if (doRegister)
 				{
 					HardFlasher *hf = (HardFlasher*)flasher;
 
@@ -367,7 +357,7 @@ int main(int argc, char** argv)
 					h.key[0] = 0x00;
 					res = hf->writeHeader(h);
 				}
-				else if (doFlash)
+				if (doFlash)
 				{
 					LOG_NICE("Checking configuration... ");
 					LOG_DEBUG("checking configuration...");
@@ -395,13 +385,16 @@ int main(int argc, char** argv)
 						continue;
 					}
 
-					LOG_NICE("Reseting device... ");
-					LOG_DEBUG("reseting device...");
-					res = flasher->reset();
-					if (res != 0)
+					if (!doProtect)
 					{
-						printf("\n");
-						continue;
+						LOG_NICE("Reseting device... ");
+						LOG_DEBUG("reseting device...");
+						res = flasher->reset();
+						if (res != 0)
+						{
+							printf("\n");
+							continue;
+						}
 					}
 
 					uint32_t endTime = TimeUtilGetSystemTimeMs();
@@ -410,8 +403,26 @@ int main(int argc, char** argv)
 
 					LOG_NICE("==== Summary ====\nTime: %d ms\nSpeed: %.2f KBps (%d bps)\n", endTime - startTime, avg, (int)(avg * 8.0f * 1024.0f));
 				}
+				if (doProtect)
+				{
+					LOG_NICE("Protecting bootloader... ");
+					LOG_DEBUG("protecting bootloader...");
+					res = flasher->protect();
+
+					if (doFlash)
+					{
+						LOG_NICE("Reseting device... ");
+						LOG_DEBUG("reseting device...");
+						res = flasher->reset();
+						if (res != 0)
+						{
+							printf("\n");
+							continue;
+						}
+					}
+				}
 #ifdef EMBED_BOOTLOADERS
-				else if (doFlashBootloader)
+				if (doFlashBootloader)
 				{
 					static int stage = 0;
 
