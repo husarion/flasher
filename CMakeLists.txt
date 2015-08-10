@@ -11,19 +11,21 @@ endif()
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+
 include_directories(${CURRENT_DIR})
 
 if(WIN32)
-  set(PROJECT_PORT_DIR ${CURRENT_DIR}/port/windows)
-  set(CMAKE_C_FLAGS "-DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS -std=c99")
-  set(CMAKE_CXX_FLAGS "-DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS -std=c++11")
+	set(PROJECT_PORT_DIR ${CURRENT_DIR}/port/windows)
+	set(CMAKE_C_FLAGS "-DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS -std=c99 -Wall")
+	set(CMAKE_CXX_FLAGS "-DPLATFORM_WIN32 -D_CRT_SECURE_NO_WARNINGS -std=c++11 -Wall")
 
 	include_directories(${CURRENT_DIR}/port/windows/)
 	link_directories(${CURRENT_DIR}/port/windows/)
 elseif(UNIX)
-  set(PROJECT_PORT_DIR ${CURRENT_DIR}/port/linux)
-  set(CMAKE_C_FLAGS "-DPLATFORM_LINUX -std=c99 -Wall")
-  set(CMAKE_CXX_FLAGS "-DPLATFORM_LINUX -std=c++11 -Wall")
+	set(PROJECT_PORT_DIR ${CURRENT_DIR}/port/linux)
+	set(CMAKE_C_FLAGS "-DPLATFORM_LINUX -std=c99 -Wall")
+	set(CMAKE_CXX_FLAGS "-DPLATFORM_LINUX -std=c++11 -Wall")
 
 	include_directories(${CURRENT_DIR}/port/linux/ /usr/include/libusb-1.0/)
 endif()
@@ -42,13 +44,12 @@ endif()
 
 if(WIN32)
 	if(CROSS)
-        set(TARGET_NAME robocore-flasher.exe)
+		set(TARGET_NAME robocore-flasher.exe)
 	else()
-        set(TARGET_NAME robocore-flasher)
+		set(TARGET_NAME robocore-flasher)
 	endif()
 
-	add_executable(${TARGET_NAME}
-		${COMMON_SOURCES})
+	add_executable(${TARGET_NAME} ${COMMON_SOURCES})
 
 	target_link_libraries(${TARGET_NAME}
 		ftdi1 usb-1.0 pthread ws2_32)
@@ -57,20 +58,20 @@ if(WIN32)
 
 	add_custom_target(copy ALL COMMENT "Copying files...")
 	add_custom_command(TARGET copy
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_BINARY_DIR})
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	add_custom_command(TARGET copy
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_BINARY_DIR})
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
 	if(CROSS)
 		add_custom_command(TARGET copy
-            COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_BINARY_DIR})
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libstdc++-6.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 		add_custom_command(TARGET copy
-            COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_BINARY_DIR})
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.8/libgcc_s_sjlj-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 		add_custom_command(TARGET copy
-            COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_BINARY_DIR})
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	endif()
 elseif(UNIX)
-    set(TARGET_NAME robocore-flasher)
+	set(TARGET_NAME robocore-flasher)
 	add_definitions(-DUNIX)
 
 	add_executable(${TARGET_NAME}
