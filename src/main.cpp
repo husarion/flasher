@@ -35,6 +35,8 @@ int doConsole = 0;
 #define CHECK_USAGE(x) if(x) { found++; }
 #define CHECK_USAGE_NO_INC(x) if (x && found == 0) { found++; }
 
+void decodeKey(const char* source, char* target);
+
 uint32_t getTicks()
 {
 	timeval tv;
@@ -126,8 +128,11 @@ int main(int argc, char** argv)
 {
 	int speed = -1;
 	int res;
-	int regId = -1;
+	int regSerial = -1;
 	uint32_t regVer = 0xffffffff;
+	int headerId = -1;
+	char robocoreKey[16];
+	bool hasKey = false;
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 	signal(SIGINT, sigHandler);
@@ -147,10 +152,11 @@ int main(int argc, char** argv)
 		{ "setup",      no_argument,       &doSetup,     1 },
 		{ "register",   no_argument,       &doRegister,  1 },
 
-		{ "id",         required_argument, 0,       'i' },
+		{ "serial",     required_argument, 0,       'i' },
 		{ "version",    required_argument, 0,       'v' },
-		{ "big",        no_argument,       &regType,  2 },
-		{ "pro",        no_argument,       &regType,  3 },
+		{ "variant",    required_argument, 0,       100 },
+		{ "header-id",  required_argument, 0,       'H' },
+		{ "robocore-key", required_argument, 0,      'k' },
 
 		{ "speed",      required_argument, 0,       's' },
 
@@ -184,10 +190,10 @@ int main(int argc, char** argv)
 				speed = -1;
 			break;
 		case 'i':
-			regId = atoi(optarg);
-			if (regId < 0)
+			regSerial = atoi(optarg);
+			if (regSerial < 0)
 			{
-				printf("inavlid id\r\n");
+				printf("inavlid serial\r\n");
 				exit(1);
 			}
 			break;
@@ -211,23 +217,46 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (part count: %d)\r\n", (int)parts.size());
 				exit(1);
 			}
 			if (a < 0 || b < 0 || c < 0 || d < 0)
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (bad numbers)\r\n");
 				exit(1);
 			}
 			if (a + b + c + d == 0)
 			{
-				printf("invalid version\r\n");
+				printf("invalid version (all zero)\r\n");
 				exit(1);
 			}
 
 			makeVersion(regVer, a, b, c, d);
 		}
 		break;
+		case 100:
+			if (strcmp(optarg, "big") == 0)
+			{
+				regType = 2;
+			}
+			else
+			{
+				printf("invalid variant, only (2) allowed\r\n");
+				exit(1);
+			}
+			break;
+		case 'H':
+			headerId = atoi(optarg);
+			if (headerId < 0 || headerId > 4)
+			{
+				printf("invalid header id\r\n");
+				exit(1);
+			}
+			break;
+		case 'k':
+			decodeKey(optarg, robocoreKey);
+			hasKey = true;
+			break;
 		}
 	}
 
@@ -254,7 +283,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doDump);
 	CHECK_USAGE(doDumpEEPROM);
 	CHECK_USAGE(doEraseEEPROM);
-	CHECK_USAGE(doRegister && regId != -1 && regVer != 0xffffffff && regType != -1);
+	CHECK_USAGE(doRegister && regSerial != -1 && regVer != 0xffffffff && regType != -1 && headerId != -1 && hasKey);
 	CHECK_USAGE(doSetup);
 	CHECK_USAGE(doFlashBootloader);
 	CHECK_USAGE(doSwitchEdison);
@@ -338,7 +367,7 @@ int main(int argc, char** argv)
 					HardFlasher *hf = (HardFlasher*)flasher;
 
 					TRoboCOREHeader oldHeader;
-					hf->readHeader(oldHeader);
+					hf->readHeader(oldHeader, headerId);
 
 					if (!oldHeader.isClear())
 					{
@@ -353,8 +382,11 @@ int main(int argc, char** argv)
 					h.headerVersion = 0x02;
 					h.type = regType;
 					h.version = regVer;
-					h.id = regId;
-					h.key[0] = 0x00;
+					h.id = regSerial;
+					h.key[0] = 0x01;
+					memcpy(h.key + 1, robocoreKey, 16);
+					uint16_t crc = crc16_calc((uint8_t*)robocoreKey, 16);
+					memcpy(h.key + 17, &crc, 2);
 					res = hf->writeHeader(h);
 				}
 				if (doFlash)
@@ -453,7 +485,7 @@ int main(int argc, char** argv)
 						parseVersion(h.version, a, b, c, d);
 						switch (h.type)
 						{
-						case 1: sprintf(buf, "bootloader_%d_%d_%d_mini", a, b, c); break;
+						// case 1: sprintf(buf, "bootloader_%d_%d_%d_mini", a, b, c); break;
 						case 2: sprintf(buf, "bootloader_%d_%d_%d_big", a, b, c); break;
 						case 3: sprintf(buf, "bootloader_%d_%d_%d_pro", a, b, c); break;
 						default:
@@ -594,4 +626,28 @@ int main(int argc, char** argv)
 	}
 
 	return 0;
+}
+
+void decodeKey(const char* source, char* target)
+{
+	if (strlen(source) != 32)
+	{
+		printf("invalid key length (%s)\n", source);
+		exit(1);
+	}
+	for (int i = 0; i < 16; i ++)
+	{
+		char byte[3];
+		byte[0] = source[i * 2];
+		byte[1] = source[i * 2 + 1];
+		byte[2] = 0;
+		int val;
+		int read = sscanf(byte, "%x", &val);
+		if (read != 1 || !isxdigit(byte[0]) || !isxdigit(byte[1]))
+		{
+			printf("invalid key");
+			exit(1);
+		}
+		target[i] = (char)val;
+	}
 }

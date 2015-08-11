@@ -38,8 +38,8 @@ public:
 	int eraseEmulatedEEPROM();
 	int setup();
 
-	int readHeader(TRoboCOREHeader& header);
-	int writeHeader(TRoboCOREHeader& header);
+	int readHeader(TRoboCOREHeader& header, int headerId = 0);
+	int writeHeader(TRoboCOREHeader& header, int headerId = 0);
 
 private:
 	stm32_dev_t m_dev;

@@ -289,7 +289,6 @@ int HardFlasher::unprotect()
 int HardFlasher::dump()
 {
 	dumpOptionBytes();
-	dumpEmulatedEEPROM();
 	return 0;
 }
 int HardFlasher::setup()
@@ -323,15 +322,15 @@ int HardFlasher::setup()
 
 	return 0;
 }
-int HardFlasher::readHeader(TRoboCOREHeader& header)
+int HardFlasher::readHeader(TRoboCOREHeader& header, int headerId)
 {
-	const uint32_t OTP_BASE = OTP_START + 32 * 0;
+	const uint32_t OTP_BASE = OTP_START + 32 * headerId;
 	return readMemory(OTP_BASE, &header, sizeof(header));
 }
-int HardFlasher::writeHeader(TRoboCOREHeader& header)
+int HardFlasher::writeHeader(TRoboCOREHeader& header, int headerId)
 {
-	const uint32_t OTP_BASE = OTP_START + 32 * 0;
-	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
+	const uint32_t OTP_BASE = OTP_START + 32 * headerId;
+	const uint32_t OTP_LOCK = OTP_LOCK_START + headerId;
 
 	header.calcChecksum();
 
@@ -675,41 +674,46 @@ void HardFlasher::dumpOptionBytes()
 
 	printf("\r\n");
 	printf("Registration data:");
-	const uint32_t OTP_BASE = OTP_START + 32 * 0;
-	const uint32_t OTP_LOCK = OTP_LOCK_START + 0;
 
-	TRoboCOREHeader header;
-	readMemory(OTP_BASE, &header, sizeof(header));
-
-	uint8_t lock;
-	readMemory(OTP_LOCK, &lock, 1);
-	switch (lock)
+	for (int block_i = 0; block_i < 4; block_i ++)
 	{
-	case 0x00: printf(" (LOCKED)"); break;
-	case 0xff: printf(" (UNLOCKED)"); break;
-	default: printf(" (INVALID LOCK 0x%02x)", lock); break;
-	}
+		printf("Block %d:", block_i);
+		const uint32_t OTP_BASE = OTP_START + 32 * block_i;
+		const uint32_t OTP_LOCK = OTP_LOCK_START + block_i;
 
-	printf("\r\n");
+		TRoboCOREHeader header;
+		readMemory(OTP_BASE, &header, sizeof(header));
 
-	if (header.isClear())
-	{
-		printf("UNREGISTERED\r\n");
-	}
-	else
-	{
-		int a, b, c, d;
-		parseVersion(header.version, a, b, c, d);
-
-		printf("Header version = 0x%02x %s\r\n", header.headerVersion, header.isValid() ? "(CHECKSUM VALID)" : "(!! CHECKSUM INVALID !!)");
-		switch (header.type)
+		uint8_t lock;
+		readMemory(OTP_LOCK, &lock, 1);
+		switch (lock)
 		{
-		case 1:  printf("Type           = MINI\r\n"); break;
-		case 2:  printf("Type           = BIG\r\n"); break;
-		default: printf("Type           = (unknown %d)\r\n", header.type); break;
+		case 0x00: printf(" (LOCKED)"); break;
+		case 0xff: printf(" (UNLOCKED)"); break;
+		default: printf(" (INVALID LOCK 0x%02x)", lock); break;
 		}
-		printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
-		printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
+
+		printf("\r\n");
+
+		if (header.isClear())
+		{
+			printf("UNREGISTERED\r\n");
+		}
+		else
+		{
+			int a, b, c, d;
+			parseVersion(header.version, a, b, c, d);
+
+			printf("Header version = 0x%02x %s\r\n", header.headerVersion, header.isValid() ? "(CHECKSUM VALID)" : "(!! CHECKSUM INVALID !!)");
+			switch (header.type)
+			{
+			case 1:  printf("Type           = MINI\r\n"); break;
+			case 2:  printf("Type           = BIG\r\n"); break;
+			default: printf("Type           = (unknown %d)\r\n", header.type); break;
+			}
+			printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
+			printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
+		}
 	}
 }
 
