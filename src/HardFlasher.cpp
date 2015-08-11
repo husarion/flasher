@@ -336,7 +336,7 @@ int HardFlasher::writeHeader(TRoboCOREHeader& header, int headerId)
 
 	writeMemory(OTP_BASE, &header, sizeof(header));
 	printf("header version 0x%02x\r\ntype = %d\r\nversion = 0x%08x\r\nid = %d\r\n",
-			header.headerVersion, header.type, header.version, header.id);
+	       header.headerVersion, header.type, header.version, header.id);
 
 	uint8_t data[sizeof(header)];
 	readMemory(OTP_BASE, data, sizeof(header));
@@ -674,6 +674,7 @@ void HardFlasher::dumpOptionBytes()
 
 	printf("\r\n");
 	printf("Registration data:");
+	printf("\r\n");
 
 	for (int block_i = 0; block_i < 4; block_i ++)
 	{
@@ -712,7 +713,12 @@ void HardFlasher::dumpOptionBytes()
 			default: printf("Type           = (unknown %d)\r\n", header.type); break;
 			}
 			printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
-			printf("Id             = RC%d%d%d %04d\r\n", a, b, c, header.id);
+			printf("Serial         = RC%d%d%d %04d\r\n", a, b, c, header.id);
+
+			printf("Key            = ");
+			for (int i = 0; i < 16; i++)
+				printf("%02x", header.key[i + 1]);
+			printf("\r\n");
 		}
 	}
 }
