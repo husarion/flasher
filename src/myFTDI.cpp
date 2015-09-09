@@ -177,7 +177,7 @@ int uart_reset_boot()
 #endif
 	return 0;
 }
-int uart_switch_to_edison()
+int uart_switch_to_edison(bool resetSTM)
 {
 	LOG_DEBUG("setting pins for Edison mode...");
 	gpio_config_t config;
@@ -190,7 +190,7 @@ int uart_switch_to_edison()
 		return -1;
 
 	setPin(BOOT0, 0);
-	setPin(RST, 0);
+	setPin(RST, resetSTM ? 1 : 0);
 
 	uart_close();
 

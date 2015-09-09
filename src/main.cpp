@@ -64,8 +64,9 @@ void usage(char** argv)
 	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Edison management:\n");
-	fprintf(stderr, "  %s --switch-to-edison connects FTDI to Edison debug port\n", argv[0]);
-	fprintf(stderr, "  %s --switch-to-stm    connects FTDI to STM32\n", argv[0]);
+	fprintf(stderr, "  %s --switch-to-edison-only connects FTDI to Edison debug port and keeps STM32 in reset\n", argv[0]);
+	fprintf(stderr, "  %s --switch-to-edison      connects FTDI to Edison debug port\n", argv[0]);
+	fprintf(stderr, "  %s --switch-to-stm         connects FTDI to STM32\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Other commands:\n");
 	fprintf(stderr, "  %s <other options>\n", argv[0]);
@@ -160,6 +161,7 @@ int main(int argc, char** argv)
 
 		{ "speed",      required_argument, 0,       's' },
 
+		{ "switch-to-edison-only", no_argument, &doSwitchEdison, 2 },
 		{ "switch-to-edison", no_argument, &doSwitchEdison, 1 },
 		{ "switch-to-stm32",  no_argument, &doSwitchSTM32,  1 },
 
@@ -598,7 +600,7 @@ int main(int argc, char** argv)
 	{
 		LOG_NICE("Switching to Edison mode... ");
 		LOG_DEBUG("switching to Edison mode...");
-		int res = uart_switch_to_edison();
+		int res = uart_switch_to_edison(doSwitchEdison == 2);
 		if (res != 0)
 		{
 			printf("\n");

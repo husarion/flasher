@@ -17,7 +17,7 @@ bool uart_open(int speed, bool showErrors = true);
 bool uart_open_with_config(int speed, const gpio_config_t& config, bool showErrors);
 int uart_set_gpio_config(const gpio_config_t& config);
 int uart_reset_boot();
-int uart_switch_to_edison();
+int uart_switch_to_edison(bool resetSTM);
 int uart_switch_to_stm32();
 bool uart_is_opened();
 void uart_reset_normal();
