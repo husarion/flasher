@@ -146,7 +146,6 @@ int HardFlasher::erase()
 {
 	map<int, int> pages;
 
-	// TODO: optimize
 	for (int i = 0; i < (int)m_hexFile.parts.size(); i++)
 	{
 		TPart* part = m_hexFile.parts[i];
@@ -641,7 +640,7 @@ void HardFlasher::dumpOptionBytes()
 	}
 
 	printf("\r\n");
-	printf("Option bytes:\r\n");
+	printf("===== Option bytes =====\r\n");
 	uint8_t RDP = (op1 & 0x0000ff00) >> 8;
 	printf("RDP        = 0x%02x - ", RDP);
 	switch (RDP)
@@ -673,7 +672,22 @@ void HardFlasher::dumpOptionBytes()
 	printf("\r\n");
 
 	printf("\r\n");
-	printf("Registration data:");
+	printf("===== Software bootloader =====\r\n");
+	char rev[16], ver[16];
+	readMemory(0x08007f00, rev, sizeof(rev));
+	readMemory(0x08007f00 + sizeof(rev), ver, sizeof(rev));
+	if (memcmp(rev, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", sizeof(rev)) == 0 ||
+	    memcmp(rev, "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", sizeof(rev)) == 0)
+	{
+		printf("No bootloader present or no info\r\n");
+	}
+	else
+	{
+		printf("Version: %s\r\nRevision: %s\r\n", ver, rev);
+	}
+
+	printf("\r\n");
+	printf("===== Registration data =====");
 	printf("\r\n");
 
 	for (int block_i = 0; block_i < 4; block_i ++)
