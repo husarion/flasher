@@ -10,6 +10,6 @@ mkcd() {
 	cd "$1"
 }
 
-mkcd build/amd64-linux && cmake -DEMBED_BOOTLOADERS=0 ../.. -B. && make
-mkcd build/i386-linux && cmake -DEMBED_BOOTLOADERS=0 -DX86=1 ../.. -B. && make
-mkcd build/win && cmake -DEMBED_BOOTLOADERS=0 -DWIN32=1 -DCROSS=1 ../.. -B. && make
+(mkcd build/amd64-linux && cmake -DEMBED_BOOTLOADERS=0 ../.. -B. && make)
+(mkcd build/i386-linux && cmake -DEMBED_BOOTLOADERS=0 -DX86=1 ../.. -B. && make)
+(mkcd build/win && cmake -DEMBED_BOOTLOADERS=0 -DWIN32=1 -DCROSS=1 ../.. -B. && make)
