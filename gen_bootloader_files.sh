@@ -27,7 +27,7 @@ cat > $OUT_FILE <<EOF
 #include "bootloaders.h"
 EOF
 
-for file in $(find $BOOTLOADER_DIR/bin -name "bootloader_*_*_*_*.hex"); do
+for file in $(find $BOOTLOADER_DIR/bin -name "bootloader_*_*_*_*_*.hex"); do
 
 	NAME=$(basename $file .hex)
 	echo $NAME

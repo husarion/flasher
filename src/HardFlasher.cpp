@@ -172,7 +172,10 @@ int HardFlasher::eraseEmulatedEEPROM()
 	vector<int> pagesV;
 	pagesV.push_back(2);
 	pagesV.push_back(3);
-	return erasePages(pagesV);
+
+	int res = erasePages(pagesV);
+	res = writeMemory(0x08008000, "\x00\x00\xff\xff", 4);
+	return  res;
 }
 int HardFlasher::flash()
 {
@@ -290,29 +293,36 @@ int HardFlasher::dump()
 	dumpOptionBytes();
 	return 0;
 }
-int HardFlasher::setup()
+int HardFlasher::setup(bool noSettingsCheck)
 {
 	uint32_t op1;
 
-	if (readMemory(OPTION_BYTE_1, &op1, 4))
-		return -1;
-
-	// validating
-	if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
+	if (!noSettingsCheck)
 	{
-		LOG_NICE("FAIL (invalid read)\r\n");
-		return -1;
-	}
-
-	uint8_t curBOR = (op1 & BOR_MASK) >> BOR_BIT;
-	if (curBOR != 0b10)
-	{
-		op1 &= ~BOR_MASK;
-		op1 |= BOR_LEVEL << BOR_BIT;
-		if (writeMemory(OPTION_BYTE_1, &op1, 2))
+		if (readMemory(OPTION_BYTE_1, &op1, 4))
 			return -1;
-		LOG_NICE("CHANGED\r\n");
-		return -1;
+
+		// validating
+		if ((~(op1 & 0xffff0000) >> 16) != (op1 & 0x0000ffff))
+		{
+			LOG_NICE("FAIL (invalid read)\r\n");
+			return -1;
+		}
+
+		uint8_t curBOR = (op1 & BOR_MASK) >> BOR_BIT;
+		if (curBOR != 0b10)
+		{
+			op1 &= ~BOR_MASK;
+			op1 |= BOR_LEVEL << BOR_BIT;
+			if (writeMemory(OPTION_BYTE_1, &op1, 2))
+				return -1;
+			LOG_NICE("CHANGED\r\n");
+			return -1;
+		}
+		else
+		{
+			LOG_NICE("OK\r\n");
+		}
 	}
 	else
 	{
@@ -605,8 +615,40 @@ int HardFlasher::erasePages(const vector<int>& pages)
 	}
 	else if (m_dev.cmds[ERASE] == 0x43)
 	{
-		LOG_NICE("ERROR\n");
-		LOG_DEBUG("ERROR");
+		uart_send_cmd(0x43);
+		res = uart_read_ack_nack();
+		if (res != ACK)
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("erase not ack'ed");
+			// printf("Erase NACK'ed\n");
+			return -1;
+		}
+
+		uart_send_cmd(0xff);
+
+		res = uart_read_ack_nack(40000);
+		if (res == ACK)
+		{
+			LOG_NICE("OK\n");
+			LOG_DEBUG("mass Erase ACK'ed");
+			return 0;
+		}
+		else if (res == NACK)
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("mass Erase NACK'ed");
+			return -1;
+		}
+		else
+		{
+			LOG_NICE("ERROR\n");
+			LOG_DEBUG("timeout");
+			return -1;
+		}
+
+		// LOG_NICE("ERROR\n");
+		// LOG_DEBUG("ERROR");
 		return -1; // not supported
 	}
 	else

@@ -19,6 +19,7 @@ int uart_set_gpio_config(const gpio_config_t& config);
 int uart_reset_boot();
 int uart_switch_to_edison(bool resetSTM);
 int uart_switch_to_stm32();
+int uart_switch_to_esp();
 bool uart_is_opened();
 void uart_reset_normal();
 void uart_setspeed(int speed);

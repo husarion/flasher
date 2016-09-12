@@ -26,9 +26,10 @@ using namespace std;
 int doHelp = 0;
 int doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
-    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doEraseEEPROM = 0;
+    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doSwitchESP = 0, doEraseEEPROM = 0;
 int regType = -1;
 int doConsole = 0;
+int noSettingsCheck = 0;
 
 #define BEGIN_CHECK_USAGE() int found = 0; do {
 #define END_CHECK_USAGE() if (found != 1) { if (found > 1) warn1(); else warn2(); usage(argv); return 1; } } while (0);
@@ -57,7 +58,7 @@ void usage(char** argv)
 {
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "Flashing RoboCORE:\n");
+	fprintf(stderr, "Flashing CORE2:\n");
 	fprintf(stderr, "  %s [--speed speed] file.hex\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Flashing bootloader:\n");
@@ -67,13 +68,14 @@ void usage(char** argv)
 	fprintf(stderr, "  %s --switch-to-edison-only connects FTDI to Edison debug port and keeps STM32 in reset\n", argv[0]);
 	fprintf(stderr, "  %s --switch-to-edison      connects FTDI to Edison debug port\n", argv[0]);
 	fprintf(stderr, "  %s --switch-to-stm         connects FTDI to STM32\n", argv[0]);
+	fprintf(stderr, "  %s --switch-to-esp-flash   confgigure FTDI for ESP flashing\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Other commands:\n");
 	fprintf(stderr, "  %s <other options>\n", argv[0]);
 	fprintf(stderr, "\r\n");
 	fprintf(stderr, "other options:\r\n");
 	fprintf(stderr, "       --help, --usage  prints this message\n");
-	fprintf(stderr, "       --test           tests connection to RoboCORE\n");
+	fprintf(stderr, "       --test           tests connection to CORE2\n");
 	fprintf(stderr, "       --setup          setup option bits\n");
 	fprintf(stderr, "       --protect        protects bootloader against\n");
 	fprintf(stderr, "                        unintended modifications\n");
@@ -132,7 +134,7 @@ int main(int argc, char** argv)
 	int regSerial = -1;
 	uint32_t regVer = 0xffffffff;
 	int headerId = -1;
-	char robocoreKey[16];
+	char boardKey[16];
 	bool hasKey = false;
 
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -157,13 +159,16 @@ int main(int argc, char** argv)
 		{ "version",    required_argument, 0,       'v' },
 		{ "variant",    required_argument, 0,       100 },
 		{ "header-id",  required_argument, 0,       'H' },
-		{ "robocore-key", required_argument, 0,      'k' },
+		{ "board-key", required_argument, 0,      'k' },
 
 		{ "speed",      required_argument, 0,       's' },
 
 		{ "switch-to-edison-only", no_argument, &doSwitchEdison, 2 },
 		{ "switch-to-edison", no_argument, &doSwitchEdison, 1 },
 		{ "switch-to-stm32",  no_argument, &doSwitchSTM32,  1 },
+		{ "switch-to-esp-flash",  no_argument, &doSwitchESP,  1 },
+
+		{ "no-settings-check",  no_argument, &noSettingsCheck,  1 },
 
 		{ "usage",      no_argument,       &doHelp,   1 },
 		{ "help",       no_argument,       &doHelp,   1 },
@@ -256,7 +261,7 @@ int main(int argc, char** argv)
 			}
 			break;
 		case 'k':
-			decodeKey(optarg, robocoreKey);
+			decodeKey(optarg, boardKey);
 			hasKey = true;
 			break;
 		}
@@ -290,6 +295,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doFlashBootloader);
 	CHECK_USAGE(doSwitchEdison);
 	CHECK_USAGE(doSwitchSTM32);
+	CHECK_USAGE(doSwitchESP);
 	CHECK_USAGE_NO_INC(doConsole);
 	END_CHECK_USAGE();
 
@@ -386,8 +392,8 @@ int main(int argc, char** argv)
 					h.version = regVer;
 					h.id = regSerial;
 					h.key[0] = 0x01;
-					memcpy(h.key + 1, robocoreKey, 16);
-					uint16_t crc = crc16_calc((uint8_t*)robocoreKey, 16);
+					memcpy(h.key + 1, boardKey, 16);
+					uint16_t crc = crc16_calc((uint8_t*)boardKey, 16);
 					memcpy(h.key + 17, &crc, 2);
 					res = hf->writeHeader(h);
 				}
@@ -395,7 +401,7 @@ int main(int argc, char** argv)
 				{
 					LOG_NICE("Checking configuration... ");
 					LOG_DEBUG("checking configuration...");
-					res = flasher->setup();
+					res = flasher->setup(noSettingsCheck);
 					if (res != 0)
 					{
 						continue;
@@ -612,6 +618,17 @@ int main(int argc, char** argv)
 		LOG_NICE("Switching to STM32 mode... ");
 		LOG_DEBUG("switching to STM32 mode...");
 		int res = uart_switch_to_stm32();
+		if (res != 0)
+		{
+			printf("\n");
+			return 1;
+		}
+	}
+	else if (doSwitchESP)
+	{
+		LOG_NICE("Switching to ESP flash mode... ");
+		LOG_DEBUG("switching to ESP flash mode...");
+		int res = uart_switch_to_esp();
 		if (res != 0)
 		{
 			printf("\n");

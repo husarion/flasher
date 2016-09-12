@@ -36,7 +36,7 @@ public:
 	int dump();
 	int dumpEmulatedEEPROM();
 	int eraseEmulatedEEPROM();
-	int setup();
+	int setup(bool noSettingsCheck = false);
 
 	int readHeader(TRoboCOREHeader& header, int headerId = 0);
 	int writeHeader(TRoboCOREHeader& header, int headerId = 0);

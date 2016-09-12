@@ -215,6 +215,25 @@ int uart_switch_to_stm32()
 
 	return 0;
 }
+int uart_switch_to_esp()
+{
+	LOG_DEBUG("setting pins for ESP flash mode...");
+	gpio_config_t config;
+	config.cbus0 = IOMODE;
+	config.cbus1 = IOMODE;
+	config.cbus2 = KEEP_AWAKE;
+	config.cbus3 = IOMODE;
+	int res = uart_open_with_config(115200, config, false);
+	if (res)
+		return -1;
+
+	setPin(BOOT0, 0);
+	setPin(RST, 0);
+
+	uart_close();
+
+	return 0;
+}
 bool uart_is_opened()
 {
 	return ftdi != 0;

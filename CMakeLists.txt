@@ -44,9 +44,9 @@ endif()
 
 if(WIN32)
 	if(CROSS)
-		set(TARGET_NAME robocore-flasher.exe)
+		set(TARGET_NAME core2-flasher.exe)
 	else()
-		set(TARGET_NAME robocore-flasher)
+		set(TARGET_NAME core2-flasher)
 	endif()
 
 	add_executable(${TARGET_NAME} ${COMMON_SOURCES})
@@ -71,7 +71,7 @@ if(WIN32)
 			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	endif()
 elseif(UNIX)
-	set(TARGET_NAME robocore-flasher)
+	set(TARGET_NAME core2-flasher)
 	add_definitions(-DUNIX)
 
 	add_executable(${TARGET_NAME}
