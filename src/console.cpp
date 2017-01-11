@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include "myFTDI.h"
 #include <unistd.h>
-#include <thread>
 
 #ifdef UNIX
 #include <termios.h>
 #include <signal.h>
+#include <thread>
 #elif WIN32
+#include "mingw.thread.h"
 #include <windows.h>
 #endif
 
