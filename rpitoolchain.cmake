@@ -9,7 +9,7 @@ SET(CMAKE_ASM_COMPILER arm-linux-gnueabihf-gcc)
 SET(CMAKE_SYSTEM_PROCESSOR arm)
 
 #ADD_DEFINITIONS("-march=armv6")
-add_definitions("-mcpu=armv6 -mfpu=vfp -mfloat-abi=hard -marm")
+add_definitions("-march=armv6 -mfpu=vfp -mfloat-abi=hard -marm")
 
 # rdynamic means the backtrace should work
 IF (CMAKE_BUILD_TYPE MATCHES "Debug")
