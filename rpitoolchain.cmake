@@ -9,7 +9,7 @@ SET(CMAKE_ASM_COMPILER arm-linux-gnueabihf-gcc)
 SET(CMAKE_SYSTEM_PROCESSOR arm)
 
 #ADD_DEFINITIONS("-march=armv6")
-add_definitions("-mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=hard -marm")
+add_definitions("-mcpu=armv6 -mfpu=vfp -mfloat-abi=hard -marm")
 
 # rdynamic means the backtrace should work
 IF (CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -19,3 +19,4 @@ ENDIF()
 # avoids annoying and pointless warnings from gcc
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE")
 SET(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -c")
+SET(CMAKE_EXE_LINKER_FLAGS "-static")
