@@ -85,14 +85,14 @@ endif()
 option(X86 "32 bit executable" OFF)
 
 if(X86)
-  if(MULTILIB_HACK)
-	# gcc-multilib conficts with cross-compilers on old Debians
-	set_target_properties(${TARGET_NAME} PROPERTIES
-	  COMPILE_FLAGS "-m32" LINK_FLAGS "-m32"
-	  "-B" "/usr/lib/gcc/${MULTILIB_HACK}" "-L" "/usr/lib/gcc/${MULTILIB_HACK}")
-  else()
+  if(MULTILIB_HACK STREQUAL "")
 	set_target_properties(${TARGET_NAME} PROPERTIES
 	  COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+  else()
+	# gcc-multilib conficts with cross-compilers on old Debians
+	set_target_properties(${TARGET_NAME} PROPERTIES
+	  COMPILE_FLAGS "-m32"
+	  LINK_FLAGS "-m32 -B /usr/lib/gcc/${MULTILIB_HACK} -L /usr/lib/gcc/${MULTILIB_HACK}")
   endif()
 endif()
 
