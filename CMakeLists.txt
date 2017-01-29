@@ -74,12 +74,25 @@ elseif(UNIX)
 	set(TARGET_NAME core2-flasher)
 	add_definitions(-DUNIX)
 
+	include_directories(third-party/libusb/libusb)
+
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES}
-		port/linux/ftdi.c port/linux/ftdi_stream.c)
+		port/linux/ftdi.c port/linux/ftdi_stream.c
+
+        third-party/libusb/libusb/os/linux_netlink.c
+        third-party/libusb/libusb/os/linux_usbfs.c
+        third-party/libusb/libusb/os/poll_posix.c
+        third-party/libusb/libusb/os/threads_posix.c
+        third-party/libusb/libusb/core.c
+        third-party/libusb/libusb/descriptor.c
+        third-party/libusb/libusb/hotplug.c
+        third-party/libusb/libusb/io.c
+        third-party/libusb/libusb/strerror.c
+        third-party/libusb/libusb/sync.c)
 
 	target_link_libraries(${TARGET_NAME}
-		usb-1.0 pthread)
+	  pthread rt)
 endif()
 
 option(X86 "32 bit executable" OFF)

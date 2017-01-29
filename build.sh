@@ -1,16 +1,25 @@
 #!/bin/bash -e
-# if [ ! -z "$BOOTLOADER_DIR" ]; then
-	# export BOOTLOADER_DIR=$(readlink -f $BOOTLOADER_DIR)
-# fi
-
-# ./gen_bootloader_files.sh
-
-mkcd() {
-	mkdir -p "$1"
-	cd "$1"
+runcross() {
+    sudo docker run -it -e BUILDER_UID=$(id -u) -e BUILDER_GID=$(id -g) -e BUILDER_USER=$(id -un) -e BUILDER_GROUP=$(id -gn) --volume "$PWD":/work $1 sh -c "$2"
 }
 
-(mkcd build/amd64-linux && cmake -DEMBED_BOOTLOADERS=0 ../.. -B. && make)
-(mkcd build/i386-linux && cmake -DEMBED_BOOTLOADERS=0 -DX86=1 -DMULTILIB_HACK=i586-linux-gnu//4.9 ../.. -B. && make)
-(mkcd build/win && cmake -DEMBED_BOOTLOADERS=0 -DWIN32=1 -DCROSS=1 ../.. -B. && make)
-(mkcd build/rpi-linux && cmake -DCMAKE_TOOLCHAIN_FILE=../../rpitoolchain.cmake ../.. && make)
+build() {
+    arch="$1"
+    img="$2"
+    args="$3"
+    self=.
+
+    # using Dockcross
+    mkdir -p $self/build/$arch &&
+        runcross "$img" "cd $self/build/$arch && cmake $args ../.. && make -j$(nproc)"
+
+    # or using local cross toolchain (TODO)
+    # (mkdir -p $self/build/$arch &&
+    #     cd $self/build/$arch && cmake $args -DPORT=linux ../.. && make -j$(nproc))
+}
+
+build i386-linux dockcross/linux-x86 ""
+build amd64-linux dockcross/linux-x64 ""
+build rpi-linux dockcross/linux-armv6 "-DCMAKE_TOOLCHAIN_FILE=../../rpitoolchain.cmake"
+
+(mkdir -p build/win && cd build/win && cmake -DEMBED_BOOTLOADERS=0 -DWIN32=1 -DCROSS=1 ../.. -B. && make)
