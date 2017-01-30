@@ -64,9 +64,9 @@ if(WIN32)
 
 	if(CROSS)
 		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.9-posix/libstdc++-6.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/5.3-posix/libstdc++-6.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/4.9-posix/libgcc_s_sjlj-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/5.3-posix/libgcc_s_sjlj-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 		add_custom_command(TARGET copy
 			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 	endif()
