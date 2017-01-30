@@ -1,6 +1,6 @@
 #!/bin/bash -e
 runcross() {
-    sudo docker run -it -e BUILDER_UID=$(id -u) -e BUILDER_GID=$(id -g) -e BUILDER_USER=$(id -un) -e BUILDER_GROUP=$(id -gn) --volume "$PWD":/work $1 sh -c "$2"
+    sudo docker run -e BUILDER_UID=$(id -u) -e BUILDER_GID=$(id -g) -e BUILDER_USER=$(id -un) -e BUILDER_GROUP=$(id -gn) --volume "$PWD":/work $1 sh -c "$2"
 }
 
 build() {
