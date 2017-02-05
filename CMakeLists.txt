@@ -4,14 +4,14 @@ get_filename_component(CURRENT_DIR ${CMAKE_CURRENT_LIST_FILE} PATH) # for cmake 
 project(flasher_hard C CXX ASM)
 
 if(CROSS)
-	set(CMAKE_C_COMPILER "i686-w64-mingw32-gcc")
-	set(CMAKE_CXX_COMPILER "i686-w64-mingw32-g++")
+    set(CMAKE_C_COMPILER "i686-w64-mingw32.static-gcc")
+    set(CMAKE_CXX_COMPILER "i686-w64-mingw32.static-g++")
 endif()
 
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 
 include_directories(${CURRENT_DIR})
 
@@ -43,33 +43,14 @@ if(EMBED_BOOTLOADERS)
 endif()
 
 if(WIN32)
-	if(CROSS)
-		set(TARGET_NAME core2-flasher.exe)
-	else()
-		set(TARGET_NAME core2-flasher)
-	endif()
+    set(TARGET_NAME core2-flasher)
 
 	add_executable(${TARGET_NAME} ${COMMON_SOURCES})
 
 	target_link_libraries(${TARGET_NAME}
 		ftdi1 usb-1.0 pthread ws2_32)
 
-	add_definitions(-DWIN32)
-
-	add_custom_target(copy ALL COMMENT "Copying files...")
-	add_custom_command(TARGET copy
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libftdi1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-	add_custom_command(TARGET copy
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/port/windows/libusb-1.0.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-	if(CROSS)
-		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/5.3-posix/libstdc++-6.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/lib/gcc/i686-w64-mingw32/5.3-posix/libgcc_s_sjlj-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-		add_custom_command(TARGET copy
-			COMMAND ${CMAKE_COMMAND} -E copy /usr/i686-w64-mingw32/lib/libwinpthread-1.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-	endif()
+    add_definitions(-DWIN32)
 elseif(UNIX)
 	set(TARGET_NAME core2-flasher)
 	add_definitions(-DUNIX)

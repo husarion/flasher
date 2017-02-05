@@ -1,0 +1,7 @@
+
+architectures: [rpi-linux, i386-linux, amd64-linux, win]
+binaries: [core2-flasher]
+
+sdk-files:
+  tools/win/libftdi1.dll: port/windows/libftdi1.dll
+  tools/win/libusb-1.0.dll: port/windows/libusb-1.0.dll
