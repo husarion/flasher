@@ -51,6 +51,7 @@ bool uart_open(int speed, bool showErrors)
 	LOG_DEBUG("opening ftdi");
 	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
 	{
+		#ifdef __linux__
 		if (ret == -4 && getuid() != 0) {
 			// probably permission error
 			fprintf(stderr, "\nFailed to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
@@ -60,6 +61,7 @@ bool uart_open(int speed, bool showErrors)
 			system(cmd.c_str());
 			exit(1);
 		}
+		#endif
 		if (showErrors)
 			fprintf(stderr, "unable to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
 		ftdi_free(ftdi);
