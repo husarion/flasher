@@ -415,7 +415,7 @@ int ftdi_usb_get_strings(struct ftdi_context * ftdi, struct libusb_device * dev,
         return -1;
 
     if (ftdi->usb_dev == NULL && libusb_open(dev, &ftdi->usb_dev) < 0)
-            ftdi_error_return(-4, "libusb_open() failed");
+        ftdi_error_return(-4, "libusb_open() failed");
 
     if (libusb_get_device_descriptor(dev, &desc) < 0)
         ftdi_error_return(-11, "libusb_get_device_descriptor() failed");
@@ -713,7 +713,8 @@ int ftdi_usb_open_desc_index(struct ftdi_context *ftdi, int vendor, int product,
 
         if (desc.idVendor == vendor && desc.idProduct == product)
         {
-            if (libusb_open(dev, &ftdi->usb_dev) < 0)
+            int status = libusb_open(dev, &ftdi->usb_dev);
+            if (status < 0)
                 ftdi_error_return_free_device_list(-4, "usb_open() failed", devs);
 
             if (description != NULL)

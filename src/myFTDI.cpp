@@ -51,11 +51,20 @@ bool uart_open(int speed, bool showErrors)
 	LOG_DEBUG("opening ftdi");
 	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
 	{
+		if (ret == -4 && getuid() != 0) {
+			// probably permission error
+			fprintf(stderr, "\nFailed to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
+			fprintf(stderr, "\nThis is most likely caused by a permission error.\n");
+			fprintf(stderr, "Running 'sudo core2-flasher --fix-permissions', please enter your password, if prompted.\n\n");
+			std::string cmd = "sudo /proc/" + std::to_string(getpid()) + "/exe --fix-permissions";
+			system(cmd.c_str());
+			exit(1);
+		}
 		if (showErrors)
-			fprintf(stderr, "unable to open ftdi device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
+			fprintf(stderr, "unable to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
 		ftdi_free(ftdi);
 		ftdi = 0;
-		return 0;
+		return false;
 	}
 
 	ftdi->usb_read_timeout = 1000;
@@ -74,7 +83,7 @@ bool uart_open(int speed, bool showErrors)
 	ftdi_set_baudrate(ftdi, speed);
 #endif
 
-	return ftdi;
+	return true;
 }
 
 bool uart_open_with_config(int speed, const gpio_config_t& config, bool showErrors)

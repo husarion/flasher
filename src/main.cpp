@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <fstream>
 
 #include "TRoboCOREHeader.h"
 #include "timeutil.h"
@@ -26,7 +27,7 @@ using namespace std;
 int doHelp = 0;
 int doUnprotect = 0, doProtect = 0, doFlash = 0,
     doDump = 0, doDumpEEPROM = 0, doRegister = 0, doSetup = 0, doFlashBootloader = 0,
-    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doSwitchESP = 0, doEraseEEPROM = 0;
+    doTest = 0, doSwitchEdison = 0, doSwitchSTM32 = 0, doSwitchESP = 0, doEraseEEPROM = 0, doFixPermissions;
 int regType = -1;
 int doConsole = 0;
 int noSettingsCheck = 0;
@@ -61,14 +62,16 @@ void usage(char** argv)
 	fprintf(stderr, "Flashing CORE2:\n");
 	fprintf(stderr, "  %s [--speed speed] file.hex\n", argv[0]);
 	fprintf(stderr, "\n");
+	fprintf(stderr, "Serial terminal:\n");
+	fprintf(stderr, "  %s --console [--speed speed]\n", argv[0]);
+	fprintf(stderr, "\n");
 	fprintf(stderr, "Flashing bootloader:\n");
 	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "Edison management:\n");
+	fprintf(stderr, "RoboCORE management:\n");
 	fprintf(stderr, "  %s --switch-to-edison-only connects FTDI to Edison debug port and keeps STM32 in reset\n", argv[0]);
 	fprintf(stderr, "  %s --switch-to-edison      connects FTDI to Edison debug port\n", argv[0]);
 	fprintf(stderr, "  %s --switch-to-stm         connects FTDI to STM32\n", argv[0]);
-	fprintf(stderr, "  %s --switch-to-esp-flash   confgigure FTDI for ESP flashing\n", argv[0]);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Other commands:\n");
 	fprintf(stderr, "  %s <other options>\n", argv[0]);
@@ -175,6 +178,10 @@ int main(int argc, char** argv)
 
 		{ "console",    no_argument,       &doConsole, 1 },
 		{ "debug",      no_argument,       &log_debug, 1 },
+
+#ifdef __linux__
+		{ "fix-permissions", no_argument, &doFixPermissions, 1 },
+#endif
 
 		{ 0, 0, 0, 0 }
 	};
@@ -296,6 +303,7 @@ int main(int argc, char** argv)
 	CHECK_USAGE(doSwitchEdison);
 	CHECK_USAGE(doSwitchSTM32);
 	CHECK_USAGE(doSwitchESP);
+	CHECK_USAGE(doFixPermissions);
 	CHECK_USAGE_NO_INC(doConsole);
 	END_CHECK_USAGE();
 
@@ -642,6 +650,29 @@ int main(int argc, char** argv)
 		if (s == -1)
 			s = 460800;
 		return runConsole(s);
+	}
+
+	if (doFixPermissions) {
+		if (getuid() != 0) {
+			fprintf(stderr, "Run --fix-permissions as root\n");
+			exit(1);
+		}
+
+		const char* user = getenv("SUDO_USER");
+		if (user == nullptr || std::string(user) == "root") {
+			fprintf(stderr, "Run --fix-permissions via sudo or set your normal username in SUDO_USER environment variable.\n");
+			exit(1);
+		}
+		std::string rule = "SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"0403\", ATTRS{idProduct}==\"6015\", OWNER:=\"" + std::string(user) + "\", GROUP:=\"dialout\", MODE:=\"0664\"\n";
+		std::string path = "/etc/udev/rules.d/90-core2-ftdi.rules";
+		{
+			std::ofstream f (path);
+			f << rule;
+		}
+		system("udevadm control --reload-rules && udevadm trigger");
+
+		fprintf(stderr, "Fixed permissions. You may now retry the operation you wanted to do.\n\n");
+		exit(0);
 	}
 
 	return 0;
