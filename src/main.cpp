@@ -652,6 +652,7 @@ int main(int argc, char** argv)
 		return runConsole(s);
 	}
 
+#ifdef __linux__
 	if (doFixPermissions) {
 		if (getuid() != 0) {
 			fprintf(stderr, "Run --fix-permissions as root\n");
@@ -674,6 +675,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Fixed permissions. You may now retry the operation you wanted to do.\n\n");
 		exit(0);
 	}
+#endif
 
 	return 0;
 }
