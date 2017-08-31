@@ -81,6 +81,9 @@ int runConsole(int speed)
 		int res;
 		char data[1024];
 		res = uart_rx_any(data, 1024);
+		if (res == -1) {
+			exit(1);
+		}
 		if (res)
 		{
 			for (int i = 0; i < res; i++)

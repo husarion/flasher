@@ -38,6 +38,51 @@ int setPin(int pin, int value)
 	return ftdi_set_bitmode(ftdi, vals, BITMODE_CBUS);
 }
 
+bool reset_device(int vendorId, int productId) {
+	fprintf(stderr, "\rFailed to claim device - resetting... ");
+	fflush(stderr);
+	bool result = false;
+
+	libusb_context* ctx = nullptr;
+	struct libusb_device** devs = nullptr;
+
+	if (libusb_init(&ctx) < 0) goto cleanup;
+	if (libusb_get_device_list(ctx, &devs) < 0) goto cleanup;
+
+	for (; *devs != nullptr; devs ++) {
+		struct libusb_device* device = *devs;
+		libusb_device_descriptor desc = {0};
+		libusb_get_device_descriptor(device, &desc);
+
+		if (desc.idVendor == vendorId && desc.idProduct == productId) {
+			libusb_device_handle* handle;
+			if (libusb_open(device, &handle) < 0) {
+				fprintf(stderr, "device open failed\n");
+				goto cleanup;
+			}
+			if (libusb_reset_device(handle) < 0) {
+				fprintf(stderr, "device reset failed\n");
+				goto cleanup;
+			}
+			libusb_close(handle);
+		}
+	}
+
+	sleep(1);
+
+	result = true;
+ cleanup:
+	if (result)
+		fprintf(stderr, "OK\n");
+	else
+		fprintf(stderr, "failed\n");
+	//if (devs != nullptr)
+	//	libusb_free_device_list(devs, 1);
+	//if (ctx != nullptr)
+	//	libusb_exit(ctx);
+	return result;
+}
+
 bool uart_open(int speed, bool showErrors)
 {
 	int ret;
@@ -49,24 +94,39 @@ bool uart_open(int speed, bool showErrors)
 	ftdi = ftdi_new();
 
 	LOG_DEBUG("opening ftdi");
-	if ((ret = ftdi_usb_open(ftdi, 0x0403, 0x6015)) < 0)
-	{
-		#ifdef __linux__
-		if (ret == -4 && getuid() != 0) {
-			// probably permission error
-			fprintf(stderr, "\nFailed to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
-			fprintf(stderr, "\nThis is most likely caused by a permission error.\n");
-			fprintf(stderr, "Running 'sudo core2-flasher --fix-permissions', please enter your password, if prompted.\n\n");
-			std::string cmd = "sudo /proc/" + std::to_string(getpid()) + "/exe --fix-permissions";
-			system(cmd.c_str());
-			exit(1);
+
+	for (int i=0; i < 2; i ++) {
+		const int vendorId = 0x0403;
+		const int productId = 0x6015;
+		if ((ret = ftdi_usb_open(ftdi, vendorId, productId)) < 0) {
+#ifdef __linux__
+			if (ret == -4 && getuid() != 0) {
+				// probably permission error
+				fprintf(stderr, "\nFailed to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
+				fprintf(stderr, "\nThis is most likely caused by a permission error.\n");
+				fprintf(stderr, "Running 'sudo core2-flasher --fix-permissions', please enter your password, if prompted.\n\n");
+				std::string cmd = "sudo /proc/" + std::to_string(getpid()) + "/exe --fix-permissions";
+				system(cmd.c_str());
+				exit(1);
+			}
+#endif
+			if (i == 0 && ret == -5) {
+				// probably claimed by other program, reset
+				if (reset_device(vendorId, productId)) {
+					continue;
+				} else {
+					fprintf(stderr, "Failed to reset device\n");
+				}
+			}
+
+			if (showErrors)
+				fprintf(stderr, "unable to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
+			ftdi_free(ftdi);
+			ftdi = 0;
+			return false;
+		} else {
+			break;
 		}
-		#endif
-		if (showErrors)
-			fprintf(stderr, "unable to open FTDI device: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
-		ftdi_free(ftdi);
-		ftdi = 0;
-		return false;
 	}
 
 	ftdi->usb_read_timeout = 1000;
