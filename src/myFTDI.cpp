@@ -159,8 +159,8 @@ bool uart_open_with_config(int speed, const gpio_config_t& config, bool showErro
 		if (r)
 		{
 			uart_close();
-			LOG_NICE(" FTDI settings changed, RoboCORE must be replugged to take changes into account.\r\n");
-			LOG_NICE("Unplug RoboCORE.");
+			LOG_NICE(" FTDI settings changed, the device must be replugged to take changes into account.\r\n");
+			LOG_NICE("Unplug the Husarion device.");
 			bool restarted = false;
 			for (;;)
 			{

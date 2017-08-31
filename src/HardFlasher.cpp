@@ -62,7 +62,7 @@ int HardFlasher::close(bool reset)
 
 int HardFlasher::start(bool initBootloader)
 {
-	LOG_NICE("Connecting to RoboCORE...");
+	LOG_NICE("Connecting to the Husarion device...");
 
 retry_uart_open:
 	// uart opening loop
@@ -75,7 +75,7 @@ retry_uart_open:
 			if (!plugInMsgShown)
 			{
 				plugInMsgShown = true;
-				LOG_NICE(" plug in RoboCORE..");
+				LOG_NICE(" plug in Husarion device..");
 			}
 			else
 			{
@@ -138,7 +138,7 @@ retry_uart_open:
 
 	LOG_DEBUG("no bootloader response after %d retries, resetting uart...", tries);
 	LOG_NICE(" UNABLE (restarting)\n");
-	LOG_NICE("Connecting to RoboCORE...");
+	LOG_NICE("Connecting to the Husarion device...");
 	uart_close();
 	goto retry_uart_open;
 }
