@@ -249,13 +249,17 @@ int main(int argc, char** argv)
 		}
 		break;
 		case 100:
-			if (strcmp(optarg, "big") == 0)
+			if (strcmp(optarg, "core2") == 0)
 			{
-				regType = 2;
+				regType = 3;
+			}
+			else if (strcmp(optarg, "core2-mini") == 0)
+			{
+				regType = 4;
 			}
 			else
 			{
-				printf("invalid variant, only (2) allowed\r\n");
+				printf("invalid variant\r\n");
 				exit(1);
 			}
 			break;

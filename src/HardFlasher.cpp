@@ -764,12 +764,17 @@ void HardFlasher::dumpOptionBytes()
 			printf("Header version = 0x%02x %s\r\n", header.headerVersion, header.isValid() ? "(CHECKSUM VALID)" : "(!! CHECKSUM INVALID !!)");
 			switch (header.type)
 			{
-			case 1:  printf("Type           = MINI\r\n"); break;
-			case 2:  printf("Type           = BIG\r\n"); break;
+			case 1:  printf("Type           = ROBOCORE MINI\r\n"); break;
+			case 2:  printf("Type           = ROBOCORE BIG\r\n"); break;
+			case 3:  printf("Type           = CORE2\r\n"); break;
+			case 4:  printf("Type           = CORE2-MINI\r\n"); break;
 			default: printf("Type           = (unknown %d)\r\n", header.type); break;
 			}
 			printf("Version        = %d.%d.%d.%d\r\n", a, b, c, d);
-			printf("Serial         = RC%d%d%d %04d\r\n", a, b, c, header.id);
+			if (header.type <= 2)
+				printf("Serial         = RC%d%d%d %04d\r\n", a, b, c, header.id);
+			else
+				printf("Serial         = CORE2_%04d\r\n", header.id);
 
 			printf("Key            = ");
 			for (int i = 0; i < 16; i++)
