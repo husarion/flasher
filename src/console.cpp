@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "myFTDI.h"
 #include <unistd.h>
+#include <stdlib.h>
 
 #ifdef UNIX
 #include <termios.h>

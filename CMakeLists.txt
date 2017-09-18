@@ -57,12 +57,20 @@ elseif(UNIX)
 
 	include_directories(third-party/libusb/libusb)
 
+    if(MAC)
+      set(OS_SOURCES
+        third-party/libusb/libusb/os/darwin_usb.c)
+    else()
+      set(OS_SOURCES
+        third-party/libusb/libusb/os/linux_netlink.c
+        third-party/libusb/libusb/os/linux_usbfs.c)
+    endif()
+
 	add_executable(${TARGET_NAME}
 		${COMMON_SOURCES}
 		port/linux/ftdi.c port/linux/ftdi_stream.c
 
-        third-party/libusb/libusb/os/linux_netlink.c
-        third-party/libusb/libusb/os/linux_usbfs.c
+        ${OS_SOURCES}
         third-party/libusb/libusb/os/poll_posix.c
         third-party/libusb/libusb/os/threads_posix.c
         third-party/libusb/libusb/core.c
@@ -72,8 +80,12 @@ elseif(UNIX)
         third-party/libusb/libusb/strerror.c
         third-party/libusb/libusb/sync.c)
 
-	target_link_libraries(${TARGET_NAME}
-	  pthread rt)
+    if(MAC)
+      set (CMAKE_EXE_LINKER_FLAGS "-framework CoreFoundation -framework IOKit")
+    else()
+      target_link_libraries(${TARGET_NAME}
+        pthread rt)
+    endif()
 endif()
 
 option(X86 "32 bit executable" OFF)

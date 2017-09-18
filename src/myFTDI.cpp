@@ -72,10 +72,20 @@ bool reset_device(int vendorId, int productId) {
 
 	result = true;
  cleanup:
-	if (result)
+	if (result) {
 		fprintf(stderr, "OK\n");
-	else
+#ifdef __APPLE__
+		static bool firstError = true;
+		if (firstError) {
+			firstError = false;
+		} else {
+			fprintf(stderr, "\nCannot claim USB device. Try running this command:\n  sudo kextunload -b com.apple.driver.AppleUSBFTDI\n\n");
+			exit(1);
+		}
+#endif
+	} else {
 		fprintf(stderr, "failed\n");
+	}
 	//if (devs != nullptr)
 	//	libusb_free_device_list(devs, 1);
 	//if (ctx != nullptr)

@@ -284,12 +284,14 @@ static speed_t XcpTransportGetBaudrateMask(uint32_t baudrate)
 	
 	switch (baudrate)
 	{
+#ifndef __APPLE__
 	case 921600:
 		result = B921600;
 		break;
 	case 460800:
 		result = B460800;
 		break;
+#endif
 	case 230400:
 		result = B230400;
 		break;

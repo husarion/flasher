@@ -55,11 +55,11 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
-/* Darwin backend */
-/* #undef OS_DARWIN */
-
-/* Linux backend */
+#ifdef __linux__
 #define OS_LINUX 1
+#else
+#define OS_DARWIN 1
+#endif
 
 /* OpenBSD backend */
 /* #undef OS_OPENBSD */
@@ -97,8 +97,10 @@
 /* Use POSIX Threads */
 #define THREADS_POSIX 1
 
+#ifdef __linux__
 /* timerfd headers available */
 #define USBI_TIMERFD_AVAILABLE 1
+#endif
 
 /* Version number of package */
 #define VERSION "1.0.9"
