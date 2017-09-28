@@ -662,7 +662,10 @@ int ftdi_usb_open(struct ftdi_context *ftdi, int vendor, int product)
 int ftdi_usb_open_desc(struct ftdi_context *ftdi, int vendor, int product,
                        const char* description, const char* serial)
 {
-    return ftdi_usb_open_desc_index(ftdi,vendor,product,description,serial,0);
+    int index = 0;
+    char* a = getenv("FTDI_NUM");
+    if (a != 0) index = atoi(a);
+    return ftdi_usb_open_desc_index(ftdi,vendor,product,description,serial,index);
 }
 
 /**
