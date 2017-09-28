@@ -846,7 +846,7 @@ int HardFlasher::uart_read_byte()
 int HardFlasher::uart_read_data(void* data, int len)
 {
 	uint8_t* _data = (uint8_t*)data;
-	int r = uart_rx(_data, len, TIMEOUT * len);
+	int r = uart_rx(_data, len, TIMEOUT + len * 1);
 	return r == -1 ? -1 : r;
 }
 
