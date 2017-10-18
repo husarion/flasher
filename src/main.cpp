@@ -65,9 +65,6 @@ void usage(char** argv)
 	fprintf(stderr, "Serial terminal:\n");
 	fprintf(stderr, "  %s --console [--speed speed]\n", argv[0]);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "Flashing bootloader:\n");
-	fprintf(stderr, "  %s --flash-bootloader\n", argv[0]);
-	fprintf(stderr, "\n");
 	fprintf(stderr, "RoboCORE management:\n");
 	fprintf(stderr, "  %s --switch-to-edison-only connects FTDI to Edison debug port and keeps STM32 in reset\n", argv[0]);
 	fprintf(stderr, "  %s --switch-to-edison      connects FTDI to Edison debug port\n", argv[0]);
